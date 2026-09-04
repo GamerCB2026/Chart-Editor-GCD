@@ -1,0 +1,87 @@
+@font-face {
+    font-family: 'Freeplay';
+    src: url('../fonts/freeplay.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+:root {
+    --bg-menu: #2b2b36;
+    --bg-sidebar: #1a1a22;
+    --bg-card: #3d3d4f;
+    --bg-card-hover: #4a4a5e;
+    --text-main: #fff;
+    --text-sub: #a0a0b0;
+    --border-panel: #3d3d4f;
+    --bg-workspace: #4a287a;
+    --bg-editor-panel: rgba(22, 19, 31, 1);
+    --bg-editor-box: #252233;
+    --text-editor-title: #ff5b84;
+    --bg-editor-input: #161421;
+    --border-editor-panel: #332f42;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Freeplay', 'Segoe UI', Tahoma, sans-serif;
+    user-select: none;
+}
+
+body, html {
+    width: 100%;
+    height: 100%;
+    background-color: var(--bg-menu);
+    color: var(--text-main);
+    overflow: hidden;
+}
+
+.beta-badge {
+    position: fixed;
+    top: 8px;
+    right: 12px;
+    z-index: 10000;
+    padding: 4px 8px;
+    border: 1px solid #ff5b84;
+    border-radius: 4px;
+    background: #161421;
+    color: #ff5b84;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    pointer-events: none;
+}
+
+#orientation-warning {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #1a1a22;
+    display: none; 
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+}
+
+#orientation-warning img {
+    max-width: 85%;
+    max-height: 85vh;
+    object-fit: contain;
+    image-rendering: pixelated; 
+    animation: rotatePhone 2s infinite ease-in-out;
+}
+
+@keyframes rotatePhone {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(-90deg); }
+}
+
+@media (orientation: portrait) {
+    #orientation-warning {
+        display: flex; 
+    }
+}

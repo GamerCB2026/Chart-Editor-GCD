@@ -1,0 +1,36 @@
+.import-chart-overlay {
+	position: fixed;
+	inset: 0;
+	display: none;
+	align-items: center;
+	justify-content: center;
+	padding: 20px;
+	background: rgba(8, 7, 13, 0.84);
+	z-index: 2100;
+}
+
+.import-chart-overlay.active { display: flex; }
+.import-chart-panel { width: min(560px, 100%); padding: 28px; background: #191722; border: 1px solid #4c415d; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55); }
+.import-chart-header { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
+.import-chart-kicker { color: #ff5b84; font-size: 10px; font-weight: 800; letter-spacing: 2px; }
+.import-chart-header h2 { margin-top: 5px; color: #fff; font-size: 25px; }
+.import-chart-header p { margin-top: 7px; color: #a9a4b8; font-size: 12px; }
+.import-chart-close { width: 32px; height: 32px; border: 1px solid #40384e; border-radius: 6px; background: #252131; color: #c9c2d5; cursor: pointer; }
+.import-chart-close:hover { color: #fff; border-color: #ff5b84; }
+.import-chart-options { display: grid; gap: 12px; }
+.import-chart-option { display: flex; align-items: center; gap: 14px; width: 100%; padding: 16px; border: 1px solid #393245; border-radius: 8px; background: #211e2d; color: #fff; text-align: left; cursor: pointer; transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease; }
+.import-chart-option:hover { transform: translateX(4px); background: #292438; border-color: #ff5b84; }
+.import-chart-option.json:hover { border-color: #5b84ff; }
+.import-chart-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 6px; background: #34243a; color: #ff5b84; font-size: 19px; }
+.import-chart-option.json .import-chart-icon { background: #222d4b; color: #7da0ff; }
+.import-chart-option-copy { display: flex; flex: 1; flex-direction: column; gap: 4px; }
+.import-chart-option-copy strong { font-size: 14px; }
+.import-chart-option-copy small { color: #a9a4b8; font-size: 11px; }
+.import-chart-arrow { color: #81798f; font-size: 12px; }
+.import-chart-cancel { width: 100%; margin-top: 18px; padding: 10px; border: 1px solid #40384e; border-radius: 6px; background: transparent; color: #aaa3b7; cursor: pointer; }
+.import-chart-cancel:hover { color: #fff; background: #252131; }
+
+@media (max-width: 520px) {
+	.import-chart-panel { padding: 22px; }
+	.import-chart-header h2 { font-size: 21px; }
+}
