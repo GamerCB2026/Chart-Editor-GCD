@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FNF V-Slice Mobile Chart Editor</title>
+    
+    <!-- LIBRERÍA DE ICONOS: FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- TUS ESTILOS MODULARES -->
+    <link rel="stylesheet" href="css/SisMiembros.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/menu.css">
+    <link rel="stylesheet" href="css/charter.css">
+    <link rel="stylesheet" href="css/ImportChartMenu.css">
+</head>
+<body class="sm-locked">
+
+    <div id="sismiembros-login-layer">
+        <div id="sismiembros-login-box">
+            <h2>Acceso al Chart Editor</h2>
+            <p class="sm-subtitle">Ingresa el código de seguridad para continuar</p>
+            <label for="sismiembros-code-input">Código:</label>
+            <input type="text" id="sismiembros-code-input" placeholder="Escribe el código aquí" autocomplete="off" spellcheck="false">
+            <button id="sismiembros-submit-btn" type="button">ENTRAR</button>
+            <div id="sismiembros-msg"></div>
+            <div id="sismiembros-attempts">Intentos restantes: 3</div>
+        </div>
+    </div>
+
+    <div class="beta-badge">BETA 1</div>
+
+    <input type="file" id="import-fnfc-input" accept=".fnfc" style="display: none;" onchange="procesarArchivoFNFC(this)">
+    <input type="file" id="import-codename-input" accept=".json" style="display: none;" onchange="procesarArchivoCodename(this)">
+    
+    <div id="orientation-warning">
+        <img src="Icons/GiraTuCel.png" alt="Gira tu dispositivo">
+    </div>
+
+    <div id="main-menu">
+        <div class="sidebar-tabs">
+            <button class="tab-btn active" id="tab-recientes" onclick="switchTab('recientes')">
+                <img src="Icons/Projects.png" class="menu-icon icon-projects" alt=""> Proyectos
+            </button>
+            <button class="tab-btn" id="tab-ajustes" onclick="switchTab('ajustes')">
+                <img src="Icons/Config.png" class="menu-icon icon-config" alt=""> Ajustes App
+            </button>
+            <button class="tab-btn" id="tab-creditos" onclick="switchTab('creditos')">
+                <img src="Icons/Credits.png" class="menu-icon icon-credits" alt=""> Créditos
+            </button>
+        </div>
+
+        <div id="panel-recientes" class="content-panel active">
+            <div class="panel-header">
+                <h1 class="panel-title">Tus Proyectos Archivados</h1>
+                <p class="panel-subtitle">Charts guardados en la memoria local de este navegador.</p>
+            </div>
+            <div class="folder-grid" id="lista-proyectos-grid"></div>
+        </div>
+
+        <div id="panel-ajustes" class="content-panel">
+            <div class="panel-header">
+                <h1 class="panel-title">Configuración del Editor</h1>
+                <p class="panel-subtitle">Personaliza la apariencia visual y comportamiento táctil.</p>
+            </div>
+            <div class="settings-list">
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-name">Tema de Interfaz</div>
+                        <div class="setting-desc">Elige la paleta cromática general del entorno de trabajo.</div>
+                    </div>
+                    <div class="theme-selector-row">
+                        <div class="theme-select-card" id="theme-light-btn" onclick="setTheme('light')"><i class="fa-solid fa-sun"></i> Claro</div>
+                        <div class="theme-select-card active-theme" id="theme-dark-btn" onclick="setTheme('dark')"><i class="fa-solid fa-moon"></i> Oscuro</div>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-name">Zoom de la Grilla (Escala)</div>
+                        <div class="setting-desc">Ajusta el tamaño del área de notas para pantallas pequeñas.</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px; width: 45%;">
+                        <input type="range" id="setting-zoom" min="0.4" max="1" step="0.05" value="0.65" style="flex:1;" oninput="cambiarZoomDesdeAjustes(this.value)">
+                        <span id="zoom-val-display" style="font-family: monospace; font-weight: bold; min-width: 35px; color: var(--text-main);">0.65</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="panel-creditos" class="content-panel">
+            <h2>Créditos del Proyecto</h2>
+            <p style="color: var(--text-sub); margin-bottom: 15px;">Las mentes detrás de esta adaptación móvil.</p>
+            
+            <div class="credits-list">
+                <div class="credit-group">
+                    <h3><i class="fa-solid fa-crown" style="color: #ffdf00; margin-right: 5px;"></i> CREADOR PRINCIPAL</h3>
+                    <div class="credit-card owner">
+                        <span class="credit-name">GamerCB</span>
+                        <span class="credit-role">Desarrollo Base de la Demo 1 y creador de la pagina</span>
+                    </div>
+                </div>
+
+                <div class="credit-group" style="margin-top: 15px;">
+                    <h3><i class="fa-solid fa-handshake" style="color: #5de7ff; margin-right: 5px;"></i> COLABORADORES & AYUDA</h3>
+                    <div class="credit-card helper">
+                        <span class="credit-name">Edwin</span>
+                        <span class="credit-role">Programador de la pagina, desarrollador del chart editor y gran ayudante en el código.</span>
+                    </div>
+                    <div class="credit-card helper">
+                        <span class="credit-name">Jeyzel Art's</span>
+                        <span class="credit-role">Arte de la página web del Chart Editor Online.</span>
+                    </div>
+                </div>
+
+                <div class="credit-group" style="margin-top: 20px;">
+                    <h3><i class="fa-solid fa-users-gear" style="color: #ff91f1; margin-right: 5px;"></i> FNF CHART TEAM</h3>
+                    <p style="font-size: 11px; color: var(--text-sub); line-height: 1.4;">
+                        Agradecimientos especiales a mis subs de YT que me ayudaron a triunfar, gracias a eso puedo crear las herramientas base de V-Slice para ustedes.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="editor-workspace">
+        <div class="top-menu-bar">
+            <div class="menu-item-wrapper" id="menu-archivos-wrapper">
+                <div class="top-menu-btn" onclick="toggleMenuArchivos(event)">ARCHIVOS</div>
+<div class="dropdown-menu">
+                    <div class="dropdown-item" onclick="menuNuevoChart()"><i class="fa-solid fa-file-circle-plus" style="margin-right: 6px;"></i> Nuevo Chart</div>
+                    <div class="dropdown-item" onclick="menuAbrirChart()"><i class="fa-solid fa-folder-open" style="margin-right: 6px;"></i> Abrir Chart (.fnfc)</div>
+                    
+                    <!-- NUEVO BOTÓN: Archivar Chart -->
+                    <div class="dropdown-item" onclick="menuArchivarChart()"><i class="fa-solid fa-box-archive" style="margin-right: 6px; color: #5de7ff;"></i> Archivar Chart</div>
+                    
+                    <div class="dropdown-item" onclick="menuGuardarChartTo()"><i class="fa-solid fa-floppy-disk" style="margin-right: 6px;"></i> Guardar Chart a...</div>
+                    <div class="dropdown-divider"></div>
+                    <div class="dropdown-item" onclick="menuExit()"><i class="fa-solid fa-door-open" style="margin-right: 6px;"></i> Exit</div>
+                </div>
+            </div>
+            <div class="top-menu-btn">EDITOR</div>
+            <div class="top-menu-btn">VISTA</div>
+            <div class="top-menu-btn active-tab">AUDIO</div>
+            <div class="menu-item-wrapper" id="menu-windows-wrapper">
+                <div class="top-menu-btn" onclick="toggleMenuWindows(event)">WINDOWS</div>
+                <div class="dropdown-menu">
+                    <div class="dropdown-item" onclick="abrirVentanaDificultad()"><i class="fa-solid fa-layer-group" style="margin-right: 6px; color: #ffdf00;"></i> Dificultad</div>
+                    <div class="dropdown-item" onclick="abrirVentanaEvents()"><i class="fa-solid fa-bolt" style="margin-right: 6px; color: #ffdf00;"></i> Events</div>
+                    <div class="dropdown-item" onclick="abrirVentanaMetadata()"><i class="fa-solid fa-database" style="margin-right: 6px; color: #5de7ff;"></i> Metadata</div>
+                </div>
+            </div>
+            <div class="top-menu-btn" onclick="abrirVentanaHelp()">HELP</div>
+            <div class="top-prototype-text">PROTOTYPE Functionality is subject to change.</div>
+        </div>
+
+        <div class="workspace-body">
+            <div class="control-panel-left">
+                <div class="panel-section-title">Controles</div>
+                <button class="left-play-btn" id="btn-play-pause" onclick="togglePlayPause()"><i class="fa-solid fa-play"></i> Reproducir</button>
+                
+                <div style="margin-top: 12px;" class="panel-section-title">Ajustes de Velocidad</div>
+                <div class="speed-input-box">
+                    <label for="speed-dummy-input">Speed Chart</label>
+                    <input type="number" id="speed-dummy-input" class="speed-input-field" min="1" value="1" placeholder="Ej: 2.5">
+                </div>
+
+                <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;" class="panel-section-title">
+                    <span>Tracks de Voces</span>
+                    <button onclick="abrirModalReVincularAudios()" style="background: none; border: none; color: #5de7ff; cursor: pointer; font-size: 10px; font-weight: bold; font-family: 'Segoe UI', sans-serif;">
+                        <i class="fa-solid fa-link"></i> RE-VINCULAR
+                    </button>
+                </div>
+                <div class="audio-box">
+                    <div class="audio-box-title"><i class="fa-solid fa-skull"></i> Audio Enemigo</div>
+                    <div class="audio-controls-row">
+                        <div class="audio-wave-placeholder" id="track-enemy-label">No Enemy Voice</div>
+                    </div>
+                </div>
+                <div class="audio-box">
+                    <div class="audio-box-title"><i class="fa-solid fa-microphone-lines"></i> Audio Jugador</div>
+                    <div class="audio-controls-row">
+                        <div class="audio-wave-placeholder" id="track-player-label">No Player Voice</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 15px;" class="panel-section-title">Visualizar Waveforms</div>
+                <div class="audio-box">
+                    <label style="font-size: 11px; color: var(--text-sub);">Lado Enemigo</label>
+                    <select id="wave-select-enemy" onchange="actualizarWaveforms()" class="speed-input-field">
+                        <option value="none">Ninguno</option>
+                        <option value="inst">Instrumental</option>
+                        <option value="v2" selected>Voz Enemigo</option>
+                        <option value="v1">Voz Jugador</option>
+                    </select>
+                    <label style="font-size: 11px; color: var(--text-sub); margin-top: 5px;">Lado Jugador</label>
+                    <select id="wave-select-player" onchange="actualizarWaveforms()" class="speed-input-field">
+                        <option value="none">Ninguno</option>
+                        <option value="inst">Instrumental</option>
+                        <option value="v2">Voz Enemigo</option>
+                        <option value="v1" selected>Voz Jugador</option>
+                    </select>
+                </div>
+
+                <div style="margin-top: 15px;" class="panel-section-title">Opciones de Reproducción</div>
+                <div class="audio-box">
+                    <div style="font-size: 11px; color: var(--text-sub); font-weight: bold; margin-bottom: 8px;"><i class="fa-solid fa-volume-xmark"></i> Silenciar Pistas (Mute)</div>
+                    <div class="checkbox-row">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="mute-inst" onchange="toggleMute('inst', this.checked)"> Inst
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="mute-enemy" onchange="toggleMute('v2', this.checked)"> Enemy
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="mute-player" onchange="toggleMute('v1', this.checked)"> Player
+                        </label>
+                    </div>
+                    
+                    <div style="font-size: 11px; color: var(--text-sub); font-weight: bold; margin-top: 12px; margin-bottom: 8px;"><i class="fa-solid fa-volume-high"></i> Hitsounds (Click)</div>
+                    <div class="checkbox-row">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="hit-enemy"> Enemy
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="hit-player" checked> Player
+                        </label>
+                    </div>
+
+                    <div style="font-size: 11px; color: var(--text-sub); font-weight: bold; margin-top: 15px; margin-bottom: 8px;"><i class="fa-solid fa-music"></i> Volumen Música</div>
+                    <input type="range" id="song-volume-slider" min="0" max="1" step="0.05" value="0.4" oninput="actualizarVolumenCancion(this.value)" style="width: 100%; accent-color: #d6244e; cursor: pointer;">
+                </div>
+            </div>
+
+            <div class="editor-center-column">
+                <canvas id="wave-canvas"></canvas>
+                <div id="playback-line"></div>
+                <div id="lane-labels-wrapper">
+                    <div style="flex: 1; text-align: center; color: #ff5b84; font-size: 12px; font-weight: 900; background: rgba(10,8,15,0.9); padding: 5px; border: 2px solid #ff5b84; border-top: none; border-bottom-left-radius: 8px;">ENEMIGO (Opponent)</div>
+                    <div style="flex: 1; text-align: center; color: #5b84ff; font-size: 12px; font-weight: 900; background: rgba(10,8,15,0.9); padding: 5px; border: 2px solid #5b84ff; border-top: none; border-bottom-right-radius: 8px;">JUGADOR (Player)</div>
+                </div>
+                
+                <div id="scroll-workspace" onscroll="manejarScrollManual()">
+                    <div id="scroll-inner">
+                        <div class="v-slice-grid-container" id="grilla-dinamica-container">
+                            <div class="grid-half oponent-side" id="cols-oponente"></div>
+                            <div class="grid-half player-side" id="cols-jugador"></div>
+                            <div class="grid-half events-side" id="cols-events"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-panel-right">
+                <div class="panel-section-title" style="text-align: center; margin-bottom: 15px;">Longitud del Sustain</div>
+                <div class="sustain-actions-wrapper">
+                    <button class="sustain-btn btn-recortar" onclick="ajustarLongitudNota(-1)"><i class="fa-solid fa-caret-up"></i> Recortar</button>
+                    <button class="sustain-btn btn-extender" onclick="ajustarLongitudNota(1)"><i class="fa-solid fa-caret-down"></i> Extender</button>
+                </div>
+
+                <div style="margin-top: 25px;" class="panel-section-title">Personajes</div>
+                <div class="character-icons-container" style="display: flex; gap: 10px; margin-top: 10px; width: 100%;">
+                    <div class="sidebar-icon-box" style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+                        <span style="font-size: 9px; color: var(--text-editor-title); font-weight: bold; margin-bottom: 4px;">OPPONENT</span>
+                        <div class="icon-slot" style="width: 100%; height: 50px; background-color: var(--bg-editor-input); border: 1px solid var(--border-editor-panel); border-radius: 5px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                            <img id="sidebar-icon-opponent" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23161421'/></svg>" alt="" style="max-width: 90%; max-height: 90%; object-fit: contain; image-rendering: pixelated;">
+                        </div>
+                    </div>
+                    <div class="sidebar-icon-box" style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+                        <span style="font-size: 9px; color: var(--text-editor-title); font-weight: bold; margin-bottom: 4px;">PLAYER</span>
+                        <div class="icon-slot" style="width: 100%; height: 50px; background-color: var(--bg-editor-input); border: 1px solid var(--border-editor-panel); border-radius: 5px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                            <img id="sidebar-icon-player" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23161421'/></svg>" alt="" style="max-width: 90%; max-height: 90%; object-fit: contain; image-rendering: pixelated;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bottom-playback-bar">
+            <div class="playback-info-left"><span id="txt-time">00:00.00</span><span>Beat: 0.00</span></div>
+            <div class="playback-info-right"><span id="display-song-name">Normal</span><button id="display-song-difficulty" class="playback-difficulty-button" type="button" onclick="cambiarDificultadSiguiente()">NORMAL</button><span id="display-song-bpm">BPM: 160</span></div>
+        </div>
+    </div>
+
+    <div class="floating-editor-window" id="events-window" role="dialog" aria-labelledby="events-window-title" aria-hidden="true">
+        <div class="floating-window-header" id="events-window-header">
+            <div class="floating-window-title" id="events-window-title"><i class="fa-solid fa-bolt"></i> Events</div>
+            <button class="floating-window-minimize" type="button" onclick="alternarMinimizarEvents()" aria-label="Minimizar Events"><i class="fa-solid fa-minus"></i></button>
+            <button class="floating-window-close" type="button" onclick="cerrarVentanaEvents()" aria-label="Cerrar Events"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="floating-window-body">
+            <div class="events-window-toolbar">
+                <span class="events-window-kicker">EVENT EDITOR</span>
+                <span class="events-window-status">PROTOTYPE</span>
+            </div>
+            <div class="event-preview-card">
+                <img src="eventassets/FocusCamera.png" alt="" class="event-preview-icon">
+                <div>
+                    <strong>Focus Camera</strong>
+                    <span>Evento de cámara</span>
+                </div>
+            </div>
+            <label class="events-field-label" for="event-type-select">Tipo de evento</label>
+            <select id="event-type-select" class="events-field" disabled>
+                <option>Focus Camera</option>
+            </select>
+            <label class="events-field-label" for="event-target-select">Objetivo de la cámara</label>
+            <select id="event-target-select" class="events-field" onchange="actualizarConfiguracionEvento()" disabled>
+                <option value="opponent">Opponent</option>
+                <option value="player">Player</option>
+                <option value="gf">GF (centrada)</option>
+                <option value="position">Position</option>
+            </select>
+            <div class="events-position-row" id="events-position-fields" hidden>
+                <label class="events-field-label" for="event-offset-x">Offset X</label>
+                <input id="event-offset-x" class="events-field" type="number" step="1" value="0" oninput="actualizarConfiguracionEvento()" disabled>
+                <label class="events-field-label" for="event-offset-y">Offset Y</label>
+                <input id="event-offset-y" class="events-field" type="number" step="1" value="0" oninput="actualizarConfiguracionEvento()" disabled>
+            </div>
+            <label class="events-field-label" for="event-duration-input">Duración del efecto</label>
+            <input id="event-duration-input" class="events-field" type="number" min="0" step="0.1" value="0" oninput="actualizarConfiguracionEvento()" disabled>
+            <label class="events-field-label" for="event-effect-select">Tipo de efecto</label>
+            <select id="event-effect-select" class="events-field" onchange="actualizarConfiguracionEvento()" disabled>
+                <option value="CLASSIC">CLASSIC</option>
+            </select>
+            <div class="events-classic-hint">CLASSIC ignora la duración que se coloque.</div>
+            <div class="events-actions-row">
+                <button class="event-delete-button" id="event-delete-button" type="button" onclick="eliminarEventoSeleccionado()" disabled><i class="fa-solid fa-trash"></i> Eliminar evento</button>
+            </div>
+            <div class="events-empty-state">
+                <i class="fa-solid fa-circle-info"></i>
+                <span>Selecciona un evento para editar su configuración.</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="floating-editor-window difficulty-window" id="difficulty-window" role="dialog" aria-labelledby="difficulty-window-title" aria-hidden="true">
+        <div class="floating-window-header" id="difficulty-window-header">
+            <div class="floating-window-title" id="difficulty-window-title"><i class="fa-solid fa-layer-group"></i> Dificultad</div>
+            <button class="floating-window-minimize" type="button" onclick="alternarMinimizarDificultad()" aria-label="Minimizar Dificultad"><i class="fa-solid fa-minus"></i></button>
+            <button class="floating-window-close" type="button" onclick="cerrarVentanaDificultad()" aria-label="Cerrar Dificultad"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="floating-window-body difficulty-content">
+            <div class="events-window-toolbar">
+                <span class="events-window-kicker">CHART DIFFICULTY</span>
+                <span class="events-window-status">MULTI</span>
+            </div>
+            <div class="difficulty-list" id="difficulty-list"></div>
+            <div class="difficulty-actions">
+                <button class="difficulty-action-button" type="button" disabled><i class="fa-solid fa-plus"></i> Añadir dificultad</button>
+                <button class="difficulty-action-button" type="button" onclick="quitarDificultadActiva()"><i class="fa-solid fa-minus"></i> Quitar dificultad</button>
+            </div>
+            <button class="difficulty-restore-button" type="button" onclick="restaurarDificultadesFaltantes()"><i class="fa-solid fa-rotate-left"></i> Añadir dificultad faltante</button>
+        </div>
+    </div>
+
+    <div class="floating-editor-window metadata-window" id="metadata-window" role="dialog" aria-labelledby="metadata-window-title" aria-hidden="true">
+        <div class="floating-window-header" id="metadata-window-header">
+            <div class="floating-window-title" id="metadata-window-title"><i class="fa-solid fa-database"></i> Metadata</div>
+            <button class="floating-window-minimize" type="button" onclick="alternarMinimizarMetadata()" aria-label="Minimizar Metadata"><i class="fa-solid fa-minus"></i></button>
+            <button class="floating-window-close" type="button" onclick="cerrarVentanaMetadata()" aria-label="Cerrar Metadata"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="floating-window-body">
+            <div class="events-window-toolbar">
+                <span class="events-window-kicker">SONG METADATA</span>
+                <span class="events-window-status">EDITABLE</span>
+            </div>
+            <label class="events-field-label" for="metadata-song-name">Nombre</label>
+            <input id="metadata-song-name" class="events-field" type="text" oninput="actualizarMetadataDesdeInterfaz()">
+            <label class="events-field-label" for="metadata-composer">Compositor</label>
+            <input id="metadata-composer" class="events-field" type="text" oninput="actualizarMetadataDesdeInterfaz()">
+            <label class="events-field-label" for="metadata-charter">Charter</label>
+            <input id="metadata-charter" class="events-field" type="text" oninput="actualizarMetadataDesdeInterfaz()">
+            <label class="events-field-label" for="metadata-bpm">BPM</label>
+            <input id="metadata-bpm" class="events-field" type="number" min="20" max="400" step="0.01" oninput="actualizarMetadataDesdeInterfaz()">
+            <label class="events-field-label" for="metadata-album">Album</label>
+            <input id="metadata-album" class="events-field" type="text" oninput="actualizarMetadataDesdeInterfaz()">
+            <label class="events-field-label" for="metadata-difficulty">Dificultad (1-15)</label>
+            <input id="metadata-difficulty" class="events-field" type="number" min="1" max="15" step="1" oninput="actualizarMetadataDesdeInterfaz()">
+            <div class="metadata-section-title">PERSONAJES</div>
+            <label class="events-field-label" for="metadata-player">BF</label>
+            <input id="metadata-player" class="events-field" type="text" oninput="actualizarMetadataDesdeInterfaz()">
+            <label class="events-field-label" for="metadata-girlfriend">GF</label>
+            <input id="metadata-girlfriend" class="events-field" type="text" oninput="actualizarMetadataDesdeInterfaz()">
+            <label class="events-field-label" for="metadata-opponent">DAD</label>
+            <input id="metadata-opponent" class="events-field" type="text" oninput="actualizarMetadataDesdeInterfaz()">
+            <label class="events-field-label" for="metadata-stage">Stage</label>
+            <input id="metadata-stage" class="events-field" type="text" oninput="actualizarMetadataDesdeInterfaz()">
+        </div>
+    </div>
+
+    <div class="floating-editor-window help-window" id="help-window" role="dialog" aria-labelledby="help-window-title" aria-hidden="true">
+        <div class="floating-window-header" id="help-window-header">
+            <div class="floating-window-title" id="help-window-title"><i class="fa-solid fa-circle-question"></i> Help</div>
+            <button class="floating-window-minimize" type="button" onclick="alternarMinimizarHelp()" aria-label="Minimizar Help"><i class="fa-solid fa-minus"></i></button>
+            <button class="floating-window-close" type="button" onclick="cerrarVentanaHelp()" aria-label="Cerrar Help"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="floating-window-body help-content">
+            <div class="events-window-toolbar">
+                <span class="events-window-kicker">CHART EDITOR GUIDE</span>
+                <span class="events-window-status">HELP</span>
+            </div>
+            <section>
+                <h3>Inicio y archivos</h3>
+                <p><strong>Nuevo Chart:</strong> escribe nombre, BPM, compositor y charter. Después carga el instrumental y, opcionalmente, las dos voces.</p>
+                <p><strong>Abrir Chart:</strong> importa un archivo <code>.fnfc</code> con sus notas, eventos, metadata y audios incluidos.</p>
+                <p><strong>Archivar Chart:</strong> guarda el proyecto en este navegador. Usa <strong>Re-vincular</strong> para volver a cargar los audios si el navegador los elimina.</p>
+            </section>
+            <section>
+                <h3>Editor de notas</h3>
+                <p>Las ocho columnas centrales son cuatro carriles del oponente y cuatro del jugador. Al tocar o hacer clic en una casilla se coloca una flecha; al repetirlo se elimina o selecciona.</p>
+                <p>Selecciona una nota y usa <strong>Recortar</strong> o <strong>Extender</strong> para cambiar su sustain.</p>
+                <p>La columna de Events está separada y usa un borde azul oscuro para distinguirla de las notas.</p>
+            </section>
+            <section>
+                <h3>Events y Metadata</h3>
+                <p>En <strong>Windows &gt; Events</strong>, selecciona una casilla de Events para crear o editar un Focus Camera. Puedes elegir objetivo, duración, offsets X/Y y CLASSIC, además de eliminarlo.</p>
+                <p>En <strong>Windows &gt; Metadata</strong>, modifica nombre, compositor, charter, BPM, album, dificultad, personajes y stage. Los cambios se guardan en el proyecto archivado y en el próximo exportado.</p>
+            </section>
+            <section>
+                <h3>Audio y reproducción</h3>
+                <p>El instrumental marca el tiempo principal. Las voces se sincronizan al iniciar, pausar, reanudar o mover el scroll. Elige las waveforms, mutea pistas y ajusta el volumen desde el panel izquierdo.</p>
+                <p>Activa los hitsounds para escuchar una señal al pasar por las notas durante la reproducción.</p>
+            </section>
+            <section>
+                <h3>Controles en PC</h3>
+                <p><strong>Mouse:</strong> haz clic en notas, Events y controles. Arrastra la barra de una ventana para moverla y usa su esquina para redimensionarla.</p>
+                <p><strong>Tecla Espacio:</strong> reproduce o pausa el chart.</p>
+            </section>
+            <section>
+                <h3>Controles en móvil</h3>
+                <p><strong>Táctil:</strong> toca las casillas para colocar notas o Events. Mantén presionada la barra superior de una ventana para moverla.</p>
+                <p>Gira el dispositivo a orientación horizontal para trabajar con la grilla completa. Usa minimizar cuando necesites liberar espacio visual.</p>
+            </section>
+        </div>
+    </div>
+
+    <!-- MODALES -->
+    <div class="import-chart-overlay" id="modal-importar-chart" role="dialog" aria-modal="true" aria-labelledby="import-chart-title">
+        <div class="import-chart-panel">
+            <div class="import-chart-header">
+                <div>
+                    <span class="import-chart-kicker">IMPORT CENTER</span>
+                    <h2 id="import-chart-title">Importar chart</h2>
+                    <p>Elige el formato de tu archivo para abrirlo en el editor.</p>
+                </div>
+                <button class="import-chart-close" type="button" onclick="cerrarModalImportacion()" aria-label="Cerrar">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="import-chart-options">
+                <button class="import-chart-option fnfc" type="button" onclick="seleccionarImportacion('fnfc')">
+                    <span class="import-chart-icon"><i class="fa-solid fa-file-zipper"></i></span>
+                    <span class="import-chart-option-copy"><strong>Chart .fnfc</strong><small>Chart V-Slice con audio incluido</small></span>
+                    <i class="fa-solid fa-arrow-right import-chart-arrow"></i>
+                </button>
+            </div>
+            <button class="import-chart-cancel" type="button" onclick="cerrarModalImportacion()">Cancelar</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-nuevo-chart">
+        <div class="modal-window">
+            <div class="modal-step active" id="step-1">
+                <div class="modal-header">
+                    <h2><i class="fa-solid fa-file-waveform" style="margin-right: 5px;"></i> Nuevo Chart (Paso 1)</h2>
+                    <span class="close-modal-btn" onclick="cerrarModalNuevoChart()"><i class="fa-solid fa-xmark"></i></span>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Nombre de la Canción</label>
+                        <input type="text" id="song-name" class="modal-input" value="Bopeebo" placeholder="Ej: Dadbattle">
+                    </div>
+                    <div class="form-group-row">
+                        <div class="form-group" style="flex:1;">
+                            <label>BPM</label>
+                            <input type="number" id="song-bpm" class="modal-input" min="20" max="400" placeholder="Escribe el BPM" required>
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label>Autor / Compositor</label>
+                            <input type="text" id="song-author" class="modal-input" value="Kawai Sprite">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Charter</label>
+                        <input type="text" id="song-charter" class="modal-input" value="Deiby">
+                    </div>
+                </div>
+                <div class="modal-buttons">
+                    <button class="btn btn-cancel" onclick="cerrarModalNuevoChart()">Cancelar</button>
+                    <button class="btn btn-confirm" onclick="irAPaso2()">Siguiente <i class="fa-solid fa-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <div class="modal-step" id="step-2" style="display: none;">
+                <div class="modal-header">
+                    <h2><i class="fa-solid fa-file-audio" style="margin-right: 5px;"></i> Cargar Audios (Paso 2)</h2>
+                    <span class="close-modal-btn" onclick="cerrarModalNuevoChart()"><i class="fa-solid fa-xmark"></i></span>
+                </div>
+                <div class="modal-inputs-scroll">
+                    <div class="form-group" style="margin-top: 10px;">
+                        <label>tu inst.ogg (Instrumental - Obligatorio)</label>
+                        <div class="file-input-wrapper">
+                            <span class="file-label-text" id="label-inst">Ninguno</span>
+                            <span class="file-btn-mock"><i class="fa-solid fa-magnifying-glass"></i> Buscar</span>
+                            <input type="file" id="file-inst" accept=".ogg,audio/ogg" onchange="actualizarNombreArchivo('file-inst', 'label-inst')">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>tu voice1.ogg (Jugador - Opcional)</label>
+                        <div class="file-input-wrapper">
+                            <span class="file-label-text" id="label-voice1">Ninguno</span>
+                            <span class="file-btn-mock"><i class="fa-solid fa-magnifying-glass"></i> Buscar</span>
+                            <input type="file" id="file-inst-v1" accept=".ogg,audio/ogg" onchange="actualizarNombreArchivo('file-inst-v1', 'label-voice1')">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>tu voice2.ogg (Enemigo - Opcional)</label>
+                        <div class="file-input-wrapper">
+                            <span class="file-label-text" id="label-voice2">Ninguno</span>
+                            <span class="file-btn-mock"><i class="fa-solid fa-magnifying-glass"></i> Buscar</span>
+                            <input type="file" id="file-inst-v2" accept=".ogg,audio/ogg" onchange="actualizarNombreArchivo('file-inst-v2', 'label-voice2')">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-buttons">
+                    <button class="btn btn-cancel" onclick="irAPaso1()"><i class="fa-solid fa-arrow-left"></i> Atrás</button>
+                    <button class="btn btn-confirm" id="btn-crear-final" onclick="crearProyectoFinalFiel()"><i class="fa-solid fa-check"></i> Crear Chart</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- MODAL DE RE-VINCULAR AUDIOS -->
+    <div class="modal-overlay" id="modal-revincular-audio">
+        <div class="modal-window">
+            <div class="modal-step active">
+                <div class="modal-header">
+                    <h2><i class="fa-solid fa-link" style="margin-right: 5px;"></i> Re-vincular Audios</h2>
+                    <span class="close-modal-btn" onclick="cerrarModalReVincularAudios()"><i class="fa-solid fa-xmark"></i></span>
+                </div>
+                <p style="font-size: 11px; color: var(--text-sub); padding: 15px 20px 0; font-family: 'Segoe UI', sans-serif;">
+                    Al cargar un chart archivado, el navegador borra la música de la memoria por seguridad. Sube los audios aquí para volver a escucharlos.
+                </p>
+                <div class="modal-inputs-scroll" style="padding: 10px 20px;">
+                    <div class="form-group">
+                        <label>inst.ogg (Instrumental)</label>
+                        <div class="file-input-wrapper">
+                            <span class="file-label-text" id="label-re-inst">Ninguno</span>
+                            <span class="file-btn-mock"><i class="fa-solid fa-magnifying-glass"></i> Buscar</span>
+                            <input type="file" id="file-re-inst" accept=".ogg,audio/ogg" onchange="actualizarNombreArchivo('file-re-inst', 'label-re-inst')">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>voice1.ogg (Jugador)</label>
+                        <div class="file-input-wrapper">
+                            <span class="file-label-text" id="label-re-voice1">Ninguno</span>
+                            <span class="file-btn-mock"><i class="fa-solid fa-magnifying-glass"></i> Buscar</span>
+                            <input type="file" id="file-re-voice1" accept=".ogg,audio/ogg" onchange="actualizarNombreArchivo('file-re-voice1', 'label-re-voice1')">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>voice2.ogg (Enemigo)</label>
+                        <div class="file-input-wrapper">
+                            <span class="file-label-text" id="label-re-voice2">Ninguno</span>
+                            <span class="file-btn-mock"><i class="fa-solid fa-magnifying-glass"></i> Buscar</span>
+                            <input type="file" id="file-re-voice2" accept=".ogg,audio/ogg" onchange="actualizarNombreArchivo('file-re-voice2', 'label-re-voice2')">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-buttons" style="padding: 15px 20px;">
+                    <button class="btn btn-cancel" onclick="cerrarModalReVincularAudios()">Cancelar</button>
+                    <button class="btn btn-confirm" id="btn-revincular-final" onclick="procesarReVinculacionAudios()"><i class="fa-solid fa-check"></i> Cargar Audios</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TUS SCRIPTS MODULARES -->
+    <script src="js/SisMiembros.js"></script>
+    <script src="js/variables.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/charter.js"></script>
+    <script src="js/ImportChart.js"></script>
+    <script src="js/menu.js"></script>
+</body>
+</html>
