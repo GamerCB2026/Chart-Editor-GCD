@@ -12,6 +12,7 @@ const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 let isPlaying = false;
 let animationFrameId = null;
 let ignorarSiguienteScroll = false;
+let ignorarScrollHasta = 0; // performance.now() until which programmatic scroll is ignored
  
 const alturaCelda = 45;
 const CARRILES_JUGADOR = [0, 1, 2, 3];

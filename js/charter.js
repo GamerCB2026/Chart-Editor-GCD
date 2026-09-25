@@ -13,42 +13,80 @@ function inicializarWorkspace() {
             aplicarMuteEstadosUI();
             
             // Empujoncito extra para forzar a la pantalla a dibujarse
-            setTimeout(actualizarWaveforms, 150);
+            if (typeof refrescarWaveformsTrasCarga === "function") setTimeout(() => refrescarWaveformsTrasCarga(), 150);
+            else setTimeout(() => actualizarWaveforms(null, true), 150);
         }
         intentos++;
     }, 20); 
 }
 
+// Unifica events en una sola referencia compartida entre chart.events y todas las dificultades.
+function asegurarEventosCompartidos(chart) {
+    if (!chart || typeof chart !== "object") return;
+    const shared = (chart.events && typeof chart.events === "object" && !Array.isArray(chart.events))
+        ? chart.events
+        : {};
+    if (chart.difficulties && typeof chart.difficulties === "object" && !Array.isArray(chart.difficulties)) {
+        Object.keys(chart.difficulties).forEach((nombre) => {
+            const ev = chart.difficulties[nombre] && chart.difficulties[nombre].events;
+            if (ev && typeof ev === "object" && !Array.isArray(ev) && ev !== shared) {
+                Object.keys(ev).forEach((clave) => {
+                    if (!(clave in shared)) shared[clave] = ev[clave];
+                });
+            }
+        });
+        Object.keys(chart.difficulties).forEach((nombre) => {
+            if (!chart.difficulties[nombre] || typeof chart.difficulties[nombre] !== "object") {
+                chart.difficulties[nombre] = { notes: {}, events: shared };
+            } else {
+                chart.difficulties[nombre].events = shared;
+            }
+        });
+    }
+    chart.events = shared;
+}
+
 function asegurarDificultadesChart(chart) {
-    const nombres = ["hard", "normal", "easy"];
     const tieneMapaDeDificultades = chart.difficulties && typeof chart.difficulties === "object" && !Array.isArray(chart.difficulties);
     if (!tieneMapaDeDificultades) {
+        const sharedEvents = chart.events && typeof chart.events === "object" && !Array.isArray(chart.events)
+            ? chart.events
+            : {};
         chart.difficulties = {};
         chart.difficulties.normal = {
             notes: chart.notes && typeof chart.notes === "object" ? chart.notes : {},
-            events: chart.events && typeof chart.events === "object" ? chart.events : {}
+            events: sharedEvents
         };
-        chart.difficulties.hard = { notes: {}, events: {} };
-        chart.difficulties.easy = { notes: {}, events: {} };
+        chart.difficulties.hard = { notes: {}, events: sharedEvents };
+        chart.difficulties.easy = { notes: {}, events: sharedEvents };
+        chart.events = sharedEvents;
     }
     Object.keys(chart.difficulties).forEach((nombre) => {
         chart.difficulties[nombre].notes ||= {};
         chart.difficulties[nombre].events ||= {};
     });
+    asegurarEventosCompartidos(chart);
     chart.activeDifficulty = chart.difficulties[chart.activeDifficulty] ? chart.activeDifficulty : (chart.difficulties.normal ? "normal" : Object.keys(chart.difficulties)[0]);
     dificultadActiva = chart.activeDifficulty;
     chart.notes = chart.difficulties[dificultadActiva].notes;
-    chart.events = chart.difficulties[dificultadActiva].events;
+    chart.events = chart.events; // ya compartido
     actualizarIndicadorDificultad();
 }
 
 function guardarDificultadActiva() {
     if (!currentChartData || !dificultadActiva) return;
     if (!currentChartData.difficulties || typeof currentChartData.difficulties !== "object") currentChartData.difficulties = {};
+    const sharedEvents = currentChartData.events && typeof currentChartData.events === "object"
+        ? currentChartData.events
+        : {};
+    currentChartData.events = sharedEvents;
     currentChartData.difficulties[dificultadActiva] = {
         notes: currentChartData.notes || {},
-        events: currentChartData.events || {}
+        events: sharedEvents
     };
+    Object.keys(currentChartData.difficulties).forEach((nombre) => {
+        currentChartData.difficulties[nombre].events = sharedEvents;
+    });
 }
 
 function actualizarListaDificultades() {
@@ -70,7 +108,8 @@ function cambiarDificultad(nombre) {
     dificultadActiva = nombre;
     currentChartData.activeDifficulty = nombre;
     currentChartData.notes = currentChartData.difficulties[nombre].notes;
-    currentChartData.events = currentChartData.difficulties[nombre].events;
+    // Events compartidos: no apuntar a otro objeto vacío por dificultad
+    asegurarEventosCompartidos(currentChartData);
     notaSeleccionada = null;
     deseleccionarEventoActual();
     generarEstructuraGrilla(currentChartData.totalRows);
@@ -126,7 +165,7 @@ function quitarDificultadActiva() {
     dificultadActiva = siguiente;
     currentChartData.activeDifficulty = siguiente;
     currentChartData.notes = currentChartData.difficulties[siguiente].notes;
-    currentChartData.events = currentChartData.difficulties[siguiente].events;
+    asegurarEventosCompartidos(currentChartData);
     generarEstructuraGrilla(currentChartData.totalRows);
     pintarNotasActuales();
     pintarEventosActuales();
@@ -137,8 +176,14 @@ function quitarDificultadActiva() {
 function restaurarDificultadesFaltantes() {
     if (!currentChartData) return;
     if (!currentChartData.difficulties || typeof currentChartData.difficulties !== "object") currentChartData.difficulties = {};
+    asegurarEventosCompartidos(currentChartData);
+    const sharedEvents = currentChartData.events || {};
     ["hard", "normal", "easy"].forEach((nombre) => {
-        if (!currentChartData.difficulties[nombre]) currentChartData.difficulties[nombre] = { notes: {}, events: {} };
+        if (!currentChartData.difficulties[nombre]) {
+            currentChartData.difficulties[nombre] = { notes: {}, events: sharedEvents };
+        } else {
+            currentChartData.difficulties[nombre].events = sharedEvents;
+        }
     });
     actualizarListaDificultades();
 }
@@ -224,7 +269,10 @@ function generarEstructuraGrilla(filas) {
 
 function manejarClickCeldaEvento(e, f, cell) {
     e.stopPropagation();
-    if (!currentChartData.events) currentChartData.events = {};
+    if (!currentChartData.events) {
+        currentChartData.events = {};
+        asegurarEventosCompartidos(currentChartData);
+    }
 
     if (!currentChartData.events[f]) {
         currentChartData.events[f] = {
@@ -377,93 +425,125 @@ function ajustarLongitudNota(dir) {
     if (len === 0) line.remove();
 }
 
-function sincronizarPistasAudio(tiempo) {
-    if (!Number.isFinite(tiempo)) return;
-    if (audioInst) audioInst.currentTime = tiempo;
-    if (audioVoice1) audioVoice1.currentTime = tiempo;
-    if (audioVoice2) audioVoice2.currentTime = tiempo;
+// Reloj maestro HTMLAudio: audioInst.currentTime + hard-sync voces (js/audio.js v097)
+
+function syncPlayPauseButtons(playing) {
+    const btn = document.getElementById("btn-play-pause");
+    const btnMobile = document.getElementById("btn-play-pause-mobile");
+    if (playing) {
+        if (btn) {
+            btn.innerHTML = '<i class="fa-solid fa-pause"></i> Pausar';
+            btn.classList.add("playing");
+        }
+        if (btnMobile) {
+            btnMobile.innerHTML = '<i class="fa-solid fa-pause"></i> Pause';
+            btnMobile.classList.add("playing");
+        }
+    } else {
+        if (btn) {
+            btn.innerHTML = '<i class="fa-solid fa-play"></i> Reproducir';
+            btn.classList.remove("playing");
+        }
+        if (btnMobile) {
+            btnMobile.innerHTML = '<i class="fa-solid fa-play"></i> Play';
+            btnMobile.classList.remove("playing");
+        }
+    }
 }
 
 function togglePlayPause() {
-    if (!audioInst) return;
-    const btn = document.getElementById("btn-play-pause");
+    if (typeof hayAudioCargado === 'function' ? !hayAudioCargado() : !audioInst) return;
     if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
-    
+    fijarVolumenPistas();
+
     if (isPlaying) {
-        audioInst.pause();
-        if (audioVoice1) audioVoice1.pause();
-        if (audioVoice2) audioVoice2.pause();
-        sincronizarPistasAudio(audioInst.currentTime);
+        const t = (typeof pauseWaPlayback === 'function')
+            ? pauseWaPlayback()
+            : ((typeof getMasterSongTime === 'function') ? getMasterSongTime() : 0);
         isPlaying = false;
-        
-        // Cambia a icono de Play
-        btn.innerHTML = '<i class="fa-solid fa-play"></i> Reproducir';
-        btn.classList.remove("playing");
+        syncPlayPauseButtons(false);
         cancelAnimationFrame(animationFrameId);
+        if (typeof actualizarWaveforms === 'function') actualizarWaveforms(t, true);
     } else {
-        const t = audioInst.currentTime;
-        sincronizarPistasAudio(t);
+        const t = (typeof getMasterSongTime === 'function') ? getMasterSongTime() : (audioInst ? audioInst.currentTime : 0);
         lastHitTime = t - 0.001;
-        const reproducciones = [audioInst, audioVoice1, audioVoice2]
-            .filter(Boolean)
-            .map((audio) => audio.play());
-        Promise.allSettled(reproducciones).then(() => sincronizarPistasAudio(audioInst.currentTime));
+        lastVoiceResyncMs = 0;
+        if (typeof startWaPlayback === 'function') {
+            startWaPlayback(t);
+        } else {
+            sincronizarPistasAudio(t);
+            const tracks = [audioInst, audioVoice1, audioVoice2].filter(Boolean);
+            tracks.forEach((a) => { try { a.volume = 1; a.playbackRate = 1; } catch (e) { } });
+            if (typeof aplicarMuteEstadosUI === 'function') aplicarMuteEstadosUI();
+            Promise.allSettled(tracks.map((audio) => audio.play()));
+        }
         isPlaying = true;
-        
-        // Cambia a icono de Pausa
-        btn.innerHTML = '<i class="fa-solid fa-pause"></i> Pausar';
-        btn.classList.add("playing");
+        syncPlayPauseButtons(true);
         animationFrameId = requestAnimationFrame(actualizarPlaybackFiel);
     }
 }
 
-function reposicionarScroll() {
-    if(!audioInst || !currentChartData) return;
-    const tiempoActual = audioInst.currentTime;
+function reposicionarScroll(forceWave = false) {
+    if (!currentChartData) return;
+    if (typeof hayAudioCargado === 'function' ? !hayAudioCargado() : !audioInst) return;
+    const tiempoActual = (typeof getMasterSongTime === 'function') ? getMasterSongTime() : audioInst.currentTime;
     const stepDuration = (60 / currentChartData.bpm) / 4;
     const currentStep = tiempoActual / stepDuration;
-    
+
     const workspace = document.getElementById('scroll-workspace');
-    ignorarSiguienteScroll = true; 
+    // Stronger ignore so programmatic scroll during play does NOT pause
+    ignorarSiguienteScroll = true;
+    if (typeof performance !== 'undefined' && performance.now) {
+        ignorarScrollHasta = performance.now() + 80;
+    } else {
+        ignorarScrollHasta = Date.now() + 80;
+    }
     workspace.scrollTop = (currentStep * alturaCelda * globalZoomFactor);
-    
-    // CORRECCIÓN: Volvemos a pasar el tiempo exacto
-    actualizarWaveforms(tiempoActual); 
+
+    if (typeof actualizarWaveforms === 'function') actualizarWaveforms(tiempoActual, forceWave);
 }
 
+let lastVoiceResyncMs = 0;
+
 function actualizarPlaybackFiel() {
-    if (!audioInst) return;
-    const tiempoActual = audioInst.currentTime;
+    if (typeof hayAudioCargado === 'function' ? !hayAudioCargado() : !audioInst) return;
+    const tiempoActual = (typeof getMasterSongTime === 'function') ? getMasterSongTime() : audioInst.currentTime;
     if (isPlaying) {
-        reposicionarScroll();
+        // v098: no per-rAF hard-seek when WA clock is active.
+        // HTML-only / hybrid fallback tracks: sync ≤ every 300ms inside sincronizarVocesAlMaster.
+        if (typeof sincronizarVocesAlMaster === 'function') sincronizarVocesAlMaster(tiempoActual);
+        reposicionarScroll(false);
         if (lastHitTime >= 0 && currentChartData) {
-            const stepDuration = 60 / currentChartData.bpm / 4;
-            let sonarHitsoundFrame = false;
-            const latencia = 0; 
-            const tiempoConLatencia = tiempoActual + latencia;
-            const lastHitConLatencia = lastHitTime + latencia;
-            
-            for (let key in currentChartData.notes) {
-                const parts = key.split("-");
-                const f = parseInt(parts[0]);
-                const c = parseInt(parts[1]);
-                const noteTime = f * stepDuration;
-                if (noteTime > lastHitConLatencia && noteTime <= tiempoConLatencia) {
-                    const hitP = document.getElementById("hit-player") && document.getElementById("hit-player").checked && c < 4;
-                    const hitE = document.getElementById("hit-enemy") && document.getElementById("hit-enemy").checked && c >= 4;
-                    if (hitE || hitP) sonarHitsoundFrame = true;
+            const hitPEl = document.getElementById("hit-player");
+            const hitEEl = document.getElementById("hit-enemy");
+            const wantP = hitPEl && hitPEl.checked;
+            const wantE = hitEEl && hitEEl.checked;
+            if (wantP || wantE) {
+                const stepDuration = 60 / currentChartData.bpm / 4;
+                let sonarHitsoundFrame = false;
+                const tiempoConLatencia = tiempoActual;
+                const lastHitConLatencia = lastHitTime;
+                for (let key in currentChartData.notes) {
+                    const parts = key.split("-");
+                    const f = parseInt(parts[0], 10);
+                    const c = parseInt(parts[1], 10);
+                    const noteTime = f * stepDuration;
+                    if (noteTime > lastHitConLatencia && noteTime <= tiempoConLatencia) {
+                        if ((wantP && c < 4) || (wantE && c >= 4)) sonarHitsoundFrame = true;
+                    }
                 }
+                if (sonarHitsoundFrame) playHitsound();
             }
-            if (sonarHitsoundFrame) playHitsound();
         }
         lastHitTime = tiempoActual;
     }
     actualizarContadorDeTiempo(tiempoActual);
     if (isPlaying) {
-        if (tiempoActual >= audioInst.duration) {
+        const dur = (typeof getMasterDuration === 'function') ? getMasterDuration() : (audioInst && audioInst.duration);
+        if (dur && tiempoActual >= dur - 0.02) {
             togglePlayPause();
-            audioInst.currentTime = 0;
-            reposicionarScroll();
+            sincronizarPistasAudio(0);
+            reposicionarScroll(true);
         } else {
             animationFrameId = requestAnimationFrame(actualizarPlaybackFiel);
         }
@@ -471,25 +551,28 @@ function actualizarPlaybackFiel() {
 }
 
 function manejarScrollManual() {
-    if (!audioInst || !currentChartData) return;
-    if (ignorarSiguienteScroll) { ignorarSiguienteScroll = false; return; }
-    if (isPlaying) togglePlayPause(); 
-    
+    if (!currentChartData) return;
+    if (typeof hayAudioCargado === 'function' ? !hayAudioCargado() : !audioInst) return;
+    const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    if (ignorarSiguienteScroll || now < ignorarScrollHasta) {
+        ignorarSiguienteScroll = false;
+        return;
+    }
+    if (isPlaying) togglePlayPause();
+
     const workspace = document.getElementById('scroll-workspace');
     const stepDuration = (60 / currentChartData.bpm) / 4;
     let nuevoTiempo = ((workspace.scrollTop / globalZoomFactor) / alturaCelda) * stepDuration;
     if (nuevoTiempo < 0) nuevoTiempo = 0;
-    if (nuevoTiempo > audioInst.duration) nuevoTiempo = audioInst.duration;
-    
-    audioInst.currentTime = nuevoTiempo;
-    if (audioVoice1) audioVoice1.currentTime = nuevoTiempo;
-    if (audioVoice2) audioVoice2.currentTime = nuevoTiempo;
-    
-    lastHitTime = nuevoTiempo; 
+    const dur = (typeof getMasterDuration === 'function') ? getMasterDuration() : (audioInst && audioInst.duration);
+    if (dur && nuevoTiempo > dur) nuevoTiempo = dur;
+
+    // Seek all three HTMLAudio tracks to same time
+    sincronizarPistasAudio(nuevoTiempo);
+
+    lastHitTime = nuevoTiempo;
     actualizarContadorDeTiempo(nuevoTiempo);
-    
-    // CORRECCIÓN: Volvemos a pasar el tiempo exacto
-    actualizarWaveforms(nuevoTiempo); 
+    if (typeof actualizarWaveforms === 'function') actualizarWaveforms(nuevoTiempo, true);
 }
 
 function actualizarContadorDeTiempo(tiempo) {
@@ -507,5 +590,52 @@ window.addEventListener("keydown", function (e) {
     if (e.code === "Space") {
         e.preventDefault();
         togglePlayPause();
+    }
+});
+
+// --- Viewport / orientación: reajustar scroll y sync de audio ---
+function reajustarTrasCambioViewport() {
+    if (!currentChartData) return;
+    const t = (typeof getMasterSongTime === 'function') ? getMasterSongTime() : (audioInst ? audioInst.currentTime : 0);
+    if (typeof actualizarAlturaScroll === 'function') actualizarAlturaScroll();
+    if ((typeof hayAudioCargado === 'function' ? hayAudioCargado() : audioInst) && typeof sincronizarPistasAudio === 'function') {
+        sincronizarPistasAudio(t);
+    }
+    if (typeof reposicionarScroll === 'function') reposicionarScroll(true);
+    else if (typeof actualizarWaveforms === 'function') actualizarWaveforms(t, true);
+    // Limpiar left/top/width/height inline en portrait para que el CSS de hoja aplique
+    if (typeof esPortraitPermitidoActivo === 'function' && esPortraitPermitidoActivo()) {
+        document.querySelectorAll('.floating-editor-window').forEach((w) => {
+            w.style.left = '';
+            w.style.top = '';
+            w.style.width = '';
+            w.style.height = '';
+        });
+    }
+}
+
+let _viewportAjusteTimer = null;
+function programarReajusteViewport() {
+    if (_viewportAjusteTimer) clearTimeout(_viewportAjusteTimer);
+    _viewportAjusteTimer = setTimeout(() => {
+        _viewportAjusteTimer = null;
+        reajustarTrasCambioViewport();
+    }, 120);
+}
+
+window.addEventListener('orientationchange', programarReajusteViewport);
+window.addEventListener('resize', programarReajusteViewport);
+
+document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState !== 'visible') return;
+    if (typeof hayAudioCargado === 'function' ? !hayAudioCargado() : !audioInst) return;
+    if (audioCtx && audioCtx.state === 'suspended') {
+        try { audioCtx.resume(); } catch (e) { }
+    }
+    const t = (typeof getMasterSongTime === 'function') ? getMasterSongTime() : audioInst.currentTime;
+    if (isPlaying) {
+        sincronizarVocesAlMaster(t, 0);
+    } else {
+        sincronizarPistasAudio(t);
     }
 });

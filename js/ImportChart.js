@@ -91,6 +91,7 @@ function pintarNotasActuales() {
 }
 
 function pintarEventosActuales() {
+	document.querySelectorAll(".event-note-icon").forEach((el) => el.remove());
 	const events = currentChartData && currentChartData.events ? currentChartData.events : {};
 	for (const row in events) {
 		const cell = document.getElementById(`event-cell-${row}`);
@@ -120,7 +121,7 @@ function convertirEventosExternos(events, bpm, dificultad = "normal") {
 	if (events && !Array.isArray(events) && typeof events === "object") events = events[dificultad] || events.normal || [];
 	if (!Array.isArray(events) || !Number.isFinite(bpm) || bpm <= 0) return resultado;
 	const stepMs = 60000 / bpm / 4;
-	const charToTarget = ["opponent", "player", "gf"];
+	const charToTarget = ["player", "opponent", "gf"]; // 0=player, 1=opponent, 2=gf (match export)
 
 	events.forEach((evento) => {
 		if (!evento || evento.e !== "FocusCamera") return;
@@ -232,6 +233,77 @@ function buscarEntradaZipPorPalabra(zip, palabra) {
 	return encontrada;
 }
 
+function mimeAudioDesdeNombre(nombre) {
+	const n = String(nombre || "").toLowerCase();
+	if (n.endsWith(".mp3")) return "audio/mpeg";
+	if (n.endsWith(".wav")) return "audio/wav";
+	if (n.endsWith(".flac")) return "audio/flac";
+	if (n.endsWith(".ogg") || n.endsWith(".oga")) return "audio/ogg";
+	if (n.endsWith(".m4a") || n.endsWith(".mp4")) return "audio/mp4";
+	return ""; // no forzar
+}
+
+function archivoDesdeBlobZip(blob, zipEntryOrName) {
+	if (!blob) return null;
+	const name = typeof zipEntryOrName === "string"
+		? zipEntryOrName
+		: (zipEntryOrName && zipEntryOrName.name) || "audio.ogg";
+	const inferred = mimeAudioDesdeNombre(name);
+	const type = inferred || blob.type || "application/octet-stream";
+	return new File([blob], name.split("/").pop(), { type });
+}
+
+/** Match Voices.ogg, Player.ogg, Voices-Player.*, Voices-Opponent.*, case-insensitive. */
+function buscarEntradaZipPatron(zip, predicado) {
+	let encontrada = null;
+	zip.forEach((relativePath, zipEntry) => {
+		if (encontrada || zipEntry.dir) return;
+		const nombre = relativePath.split("/").pop();
+		if (predicado(nombre, nombre.toLowerCase())) encontrada = zipEntry;
+	});
+	return encontrada;
+}
+
+function buscarVocesPlayerZip(zip, metadata) {
+	const player = metadata && metadata.player ? String(metadata.player) : "";
+	const exact = [
+		"Voices-Player.ogg",
+		"voices-player.ogg",
+		"Player.ogg",
+		"player.ogg",
+		"Voices.ogg",
+		"voices.ogg"
+	];
+	if (player) exact.push(`voices-${player}.ogg`, `Voices-${player}.ogg`);
+	let hit = buscarEntradaZip(zip, exact);
+	if (hit) return hit;
+	return buscarEntradaZipPatron(zip, (name, low) => {
+		if (/^voices-player\./i.test(name)) return true;
+		if (low === "voices.ogg" || low === "player.ogg") return true;
+		if (player && low === `voices-${player.toLowerCase()}.ogg`) return true;
+		return false;
+	});
+}
+
+function buscarVocesOpponentZip(zip, metadata) {
+	const opponent = metadata && metadata.opponent ? String(metadata.opponent) : "";
+	const exact = [
+		"Voices-Opponent.ogg",
+		"voices-opponent.ogg",
+		"Opponent.ogg",
+		"opponent.ogg"
+	];
+	if (opponent) exact.push(`voices-${opponent}.ogg`, `Voices-${opponent}.ogg`);
+	let hit = buscarEntradaZip(zip, exact);
+	if (hit) return hit;
+	return buscarEntradaZipPatron(zip, (name, low) => {
+		if (/^voices-opponent\./i.test(name)) return true;
+		if (low === "opponent.ogg") return true;
+		if (opponent && low === `voices-${opponent.toLowerCase()}.ogg`) return true;
+		return false;
+	});
+}
+
 function buscarAudioZip(zip, prefijo, nombre) {
 	const nombreNormalizado = String(nombre || "").trim().toLowerCase();
 	const esperado = nombreNormalizado ? `${prefijo}-${nombreNormalizado}.ogg` : `${prefijo}.ogg`;
@@ -244,11 +316,24 @@ function obtenerNombrePersonaje(valor, respaldo) {
 	return String(valor || respaldo).trim().toLowerCase();
 }
 
+function extraerBpmDesdeMetadata(metaJson, fallback = 160) {
+	const meta = metaJson && typeof metaJson === "object" ? metaJson : {};
+	const fromTime = meta.timeChanges && Array.isArray(meta.timeChanges) && meta.timeChanges[0]
+		? parseFloat(meta.timeChanges[0].bpm)
+		: NaN;
+	const fromMeta = parseFloat(meta.bpm);
+	const fromFallback = parseFloat(fallback);
+	if (Number.isFinite(fromTime) && fromTime > 0) return fromTime;
+	if (Number.isFinite(fromMeta) && fromMeta > 0) return fromMeta;
+	if (Number.isFinite(fromFallback) && fromFallback > 0) return fromFallback;
+	return 160;
+}
+
 function cargarMetadatosImportados(meta, chart) {
 	const playData = meta.playData || {};
 	const characters = playData.characters || {};
 	const speedValue = typeof chart.scrollSpeed === "object" ? chart.scrollSpeed.normal : chart.scrollSpeed;
-	const bpm = parseFloat(meta.timeChanges?.[0]?.bpm || meta.bpm || chart.bpm) || 160;
+	const bpm = extraerBpmDesdeMetadata(meta, chart && chart.bpm);
 	return {
 		songName: meta.songName || meta.song || "Imported Chart",
 		author: meta.artist || meta.composer || "",
@@ -302,6 +387,7 @@ function abrirChartEnEditor(data, conservarAudios = false) {
 	inicializarWorkspace();
 	actualizarListaDificultades();
 	actualizarIndicadorDificultad();
+	if (typeof actualizarMenuArchivar === "function") actualizarMenuArchivar();
 	return true;
 }
 
@@ -348,6 +434,11 @@ async function procesarArchivoFNFC(input) {
 			});
 			if (!chart) throw new Error("Chart sin notas reconocibles");
 
+			// Metadata BPM siempre gana sobre bpm del chart.json
+			const bpmMeta = extraerBpmDesdeMetadata(metaJson, metadata.bpm);
+			metadata.bpm = bpmMeta;
+			chart.bpm = bpmMeta;
+
 			if (Object.keys(dificultadesImportadas).length) {
 				chart.difficulties = dificultadesImportadas;
 				const primeraDificultad = Object.keys(dificultadesImportadas).find((n) => n === "normal") || Object.keys(dificultadesImportadas)[0];
@@ -358,20 +449,24 @@ async function procesarArchivoFNFC(input) {
 			}
 			const instrumentalName = metaJson.playData?.characters?.instrumental || metaJson.playData?.inst || metaJson.inst || "";
 			const instZip = buscarAudioZip(zip, "inst", instrumentalName) || buscarAudioZip(zip, "inst", "");
-			const playerZip = buscarEntradaZip(zip, ["Voices-Player.ogg", `voices-${metadata.player}.ogg`]);
-			const opponentZip = buscarEntradaZip(zip, ["Voices-Opponent.ogg", `voices-${metadata.opponent}.ogg`]);
+			const playerZip = buscarVocesPlayerZip(zip, metadata);
+			const opponentZip = buscarVocesOpponentZip(zip, metadata);
 			const blobInst = instZip ? await instZip.async("blob") : null;
 			const blobPlayer = playerZip ? await playerZip.async("blob") : null;
 			const blobOpponent = opponentZip ? await opponentZip.async("blob") : null;
-			fileRawInst = blobInst ? new File([blobInst], instZip.name, { type: "audio/ogg" }) : null;
-			fileRawV1 = blobPlayer ? new File([blobPlayer], playerZip.name, { type: "audio/ogg" }) : null;
-			fileRawV2 = blobOpponent ? new File([blobOpponent], opponentZip.name, { type: "audio/ogg" }) : null;
-			if (fileRawInst) audioInst = new Audio(URL.createObjectURL(fileRawInst));
-			if (fileRawV1) audioVoice1 = new Audio(URL.createObjectURL(fileRawV1));
-			if (fileRawV2) audioVoice2 = new Audio(URL.createObjectURL(fileRawV2));
+			fileRawInst = archivoDesdeBlobZip(blobInst, instZip);
+			fileRawV1 = archivoDesdeBlobZip(blobPlayer, playerZip);
+			fileRawV2 = archivoDesdeBlobZip(blobOpponent, opponentZip);
+			if (fileRawInst) audioInst = crearElementoAudio(fileRawInst);
+			if (fileRawV1) audioVoice1 = crearElementoAudio(fileRawV1);
+			if (fileRawV2) audioVoice2 = crearElementoAudio(fileRawV2);
 			buffers.inst = await decodeAudioFile(fileRawInst);
 			buffers.v1 = await decodeAudioFile(fileRawV1);
 			buffers.v2 = await decodeAudioFile(fileRawV2);
+			if (typeof reconstruirCacheWaveforms === "function") reconstruirCacheWaveforms();
+			if (typeof fijarVolumenPistas === "function") fijarVolumenPistas();
+			if (typeof resetWaPlaybackState === "function") resetWaPlaybackState();
+			if (typeof sincronizarPistasAudio === "function") sincronizarPistasAudio(0);
 			const duracionAudio = Math.max(
 				buffers.inst?.duration || 0,
 				buffers.v1?.duration || 0,
@@ -379,7 +474,7 @@ async function procesarArchivoFNFC(input) {
 			);
 			chart.totalRows = Math.max(
 				chart.totalRows || 0,
-				calcularFilasDesdeDuracion(duracionAudio, chart.bpm)
+				calcularFilasDesdeDuracion(duracionAudio, bpmMeta)
 			);
 
 			const dificultadesPreservadas = chart.difficulties && Object.keys(chart.difficulties).length
@@ -388,6 +483,15 @@ async function procesarArchivoFNFC(input) {
 			const dificultadActivaPreservada = chart.activeDifficulty || null;
 
 			if (!abrirChartEnEditor(chart, true)) throw new Error("Chart sin notas reconocibles");
+
+			// Reafirmar BPM de metadata tras abrir (por si normalización/UI lo alteró)
+			if (currentChartData) {
+				currentChartData.bpm = bpmMeta;
+				const bpmInputForce = document.getElementById("song-bpm");
+				if (bpmInputForce) bpmInputForce.value = bpmMeta;
+				const bpmDisplay = document.getElementById("display-song-bpm");
+				if (bpmDisplay) bpmDisplay.innerText = "BPM: " + bpmMeta;
+			}
 
 			if (dificultadesPreservadas && currentChartData) {
 				currentChartData.difficulties = dificultadesPreservadas;
@@ -407,7 +511,8 @@ async function procesarArchivoFNFC(input) {
 				dificultadActiva = preferida;
 				currentChartData.activeDifficulty = preferida;
 				currentChartData.notes = currentChartData.difficulties[preferida].notes;
-				currentChartData.events = currentChartData.difficulties[preferida].events;
+				// Fusionar events de todas las dif. en una sola referencia compartida
+				asegurarEventosCompartidos(currentChartData);
 				notaSeleccionada = null;
 				deseleccionarEventoActual();
 				generarEstructuraGrilla(currentChartData.totalRows);
@@ -418,13 +523,24 @@ async function procesarArchivoFNFC(input) {
 			}
 
 			aplicarMuteEstadosUI();
-			autoAjustarSelectoresDeWaveform(fileRawV1 && fileRawV2);
+			autoAjustarSelectoresDeWaveform(!!(fileRawV1 || fileRawV2));
 			cargarDatosEnMesa(fileRawV1, fileRawV2, metadata.songName, metadata.bpm);
+			if (typeof refrescarWaveformsTrasCarga === "function") refrescarWaveformsTrasCarga();
+			else if (typeof actualizarWaveforms === "function") setTimeout(() => actualizarWaveforms(null, true), 150);
+			if (typeof cerrarModalNuevoChart === "function") cerrarModalNuevoChart();
+			if (typeof cerrarModalImportacion === "function") cerrarModalImportacion();
+			if (typeof actualizarMenuArchivar === "function") actualizarMenuArchivar();
 			return;
 		}
 
-			const data = JSON.parse(await file.text());
-		if (!abrirChartEnEditor(data)) alert("Archivo .fnfc invalido.");
+		const data = JSON.parse(await file.text());
+		if (!abrirChartEnEditor(data)) {
+			alert("Archivo .fnfc invalido.");
+		} else {
+			if (typeof cerrarModalNuevoChart === "function") cerrarModalNuevoChart();
+			if (typeof cerrarModalImportacion === "function") cerrarModalImportacion();
+			if (typeof actualizarMenuArchivar === "function") actualizarMenuArchivar();
+		}
 	} catch (err) {
 		console.error(err);
 		alert("Error al leer y decodificar el archivo del chart.");
@@ -459,7 +575,9 @@ function renderizarProyectosArchivados() {
 			<h3>Nuevo Chart</h3>
 		</div>`;
 
-	const proyectos = JSON.parse(localStorage.getItem("fnf_mobile_charts")) || [];
+	const proyectos = (typeof leerProyectosArchivadosLS === "function")
+		? leerProyectosArchivadosLS()
+		: (JSON.parse(localStorage.getItem("fnf_mobile_charts") || "[]") || []);
 	proyectos.forEach((proy) => {
 		const card = document.createElement("div");
 		card.className = "folder-card";
@@ -479,14 +597,100 @@ function renderizarProyectosArchivados() {
 function eliminarProyectoArchivado(event, id) {
 	event.stopPropagation();
 	if (!confirm("¿Eliminar chart?")) return;
-	let proyectos = JSON.parse(localStorage.getItem("fnf_mobile_charts")) || [];
+	let proyectos = (typeof leerProyectosArchivadosLS === "function")
+		? leerProyectosArchivadosLS()
+		: (JSON.parse(localStorage.getItem("fnf_mobile_charts") || "[]") || []);
 	proyectos = proyectos.filter((proyecto) => proyecto.id !== id);
-	localStorage.setItem("fnf_mobile_charts", JSON.stringify(proyectos));
+	if (typeof guardarProyectosArchivadosLS === "function") {
+		guardarProyectosArchivadosLS(proyectos);
+	} else {
+		localStorage.setItem("fnf_mobile_charts", JSON.stringify(proyectos));
+	}
+	if (typeof idbDeleteAudios === "function") {
+		idbDeleteAudios(id).catch((e) => console.warn("No se pudieron borrar audios IDB", e));
+	}
 	renderizarProyectosArchivados();
 }
 
-function cargarProyectoDesdeArchivo(id) {
-	const proyectos = JSON.parse(localStorage.getItem("fnf_mobile_charts")) || [];
+async function cargarProyectoDesdeArchivo(id) {
+	const proyectos = (typeof leerProyectosArchivadosLS === "function")
+		? leerProyectosArchivadosLS()
+		: (JSON.parse(localStorage.getItem("fnf_mobile_charts") || "[]") || []);
 	const proyecto = proyectos.find((item) => item.id === id);
-	if (proyecto) abrirChartEnEditor(proyecto);
+	if (!proyecto) {
+		alert("No se encontró el chart archivado.");
+		return;
+	}
+
+	// Migrar audioBase64 legado → IndexedDB (una vez)
+	if (proyecto.audioBase64 && typeof migrarAudioBase64AIdb === "function") {
+		try {
+			await migrarAudioBase64AIdb(proyecto);
+		} catch (e) {
+			console.warn("Migración audioBase64 falló", e);
+		}
+	}
+
+	// Evitar audios residuales de otra sesión si este archivado no tiene IDB
+	fileRawInst = null;
+	fileRawV1 = null;
+	fileRawV2 = null;
+
+	if (!abrirChartEnEditor(proyecto)) {
+		alert("No se pudo abrir el chart archivado.");
+		return;
+	}
+
+	// Restaurar audios desde IndexedDB (o restos de migración)
+	let restaurado = false;
+	if (typeof restaurarAudiosEnMemoria === "function") {
+		try {
+			restaurado = await restaurarAudiosEnMemoria(
+				proyecto.id,
+				currentChartData?.songName || proyecto.songName,
+				currentChartData?.bpm || proyecto.bpm
+			);
+		} catch (e) {
+			console.warn("Restaurar audios IDB falló", e);
+		}
+	}
+
+	// Fallback: si aún hay audioBase64 en memoria (migración parcial)
+	if (!restaurado && proyecto.audioBase64 && typeof dataUrlABlob === "function") {
+		try {
+			const ab = proyecto.audioBase64;
+			const instBlob = ab.inst ? dataUrlABlob(ab.inst) : null;
+			const v1Blob = ab.v1 ? dataUrlABlob(ab.v1) : null;
+			const v2Blob = ab.v2 ? dataUrlABlob(ab.v2) : null;
+			fileRawInst = instBlob ? archivoDesdeBlobZip(instBlob, "inst.ogg") : null;
+			fileRawV1 = v1Blob ? archivoDesdeBlobZip(v1Blob, "voices-player.ogg") : null;
+			fileRawV2 = v2Blob ? archivoDesdeBlobZip(v2Blob, "voices-opponent.ogg") : null;
+			if (fileRawInst) audioInst = crearElementoAudio(fileRawInst);
+			if (fileRawV1) audioVoice1 = crearElementoAudio(fileRawV1);
+			if (fileRawV2) audioVoice2 = crearElementoAudio(fileRawV2);
+			buffers.inst = await decodeAudioFile(fileRawInst);
+			buffers.v1 = await decodeAudioFile(fileRawV1);
+			buffers.v2 = await decodeAudioFile(fileRawV2);
+			if (typeof reconstruirCacheWaveforms === "function") reconstruirCacheWaveforms();
+			if (typeof fijarVolumenPistas === "function") fijarVolumenPistas();
+			if (typeof resetWaPlaybackState === "function") resetWaPlaybackState();
+			if (typeof sincronizarPistasAudio === "function") sincronizarPistasAudio(0);
+			autoAjustarSelectoresDeWaveform(!!(fileRawV1 || fileRawV2));
+			cargarDatosEnMesa(fileRawV1, fileRawV2, currentChartData.songName, currentChartData.bpm);
+			if (typeof refrescarWaveformsTrasCarga === "function") refrescarWaveformsTrasCarga();
+			else if (typeof actualizarWaveforms === "function") setTimeout(() => actualizarWaveforms(null, true), 150);
+			restaurado = !!(fileRawInst || fileRawV1 || fileRawV2);
+			if (restaurado && typeof idbPutAudios === "function") {
+				await idbPutAudios(proyecto.id, {
+					inst: fileRawInst || undefined,
+					v1: fileRawV1 || undefined,
+					v2: fileRawV2 || undefined
+				}).catch(() => {});
+			}
+		} catch (e) {
+			console.warn("Fallback audioBase64 falló", e);
+		}
+	}
+
+	if (typeof actualizarMenuArchivar === "function") actualizarMenuArchivar();
 }

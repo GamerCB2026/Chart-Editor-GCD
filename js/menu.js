@@ -24,6 +24,37 @@ function resetearFormularios() {
     }
 }
  
+const PORTRAIT_KEY = 'fnf_gcd_portrait_allowed';
+
+function setPortraitMode(enabled) {
+  document.body.classList.toggle('portrait-allowed', !!enabled);
+  localStorage.setItem(PORTRAIT_KEY, enabled ? '1' : '0');
+  document.querySelectorAll('.portrait-select-card').forEach(c => c.classList.remove('active-theme'));
+  const btn = document.getElementById(enabled ? 'portrait-on-btn' : 'portrait-off-btn');
+  if (btn) btn.classList.add('active-theme');
+  if (!enabled) closeMobilePanels();
+  if (typeof reajustarTrasCambioViewport === 'function') {
+    requestAnimationFrame(() => reajustarTrasCambioViewport());
+  }
+}
+
+function toggleMobilePanel(side) {
+  const left = side === 'left';
+  document.body.classList.toggle(left ? 'left-panel-open' : 'right-panel-open');
+  if (left) document.body.classList.remove('right-panel-open');
+  else document.body.classList.remove('left-panel-open');
+}
+
+function closeMobilePanels() {
+  document.body.classList.remove('left-panel-open', 'right-panel-open');
+}
+
+
+function esPortraitPermitidoActivo() {
+  return document.body.classList.contains('portrait-allowed')
+    && window.matchMedia('(orientation: portrait)').matches;
+}
+
 window.onload = function () {
     cargarHitsound(); 
     renderizarProyectosArchivados();
@@ -33,29 +64,46 @@ window.onload = function () {
             if (!e.target.closest(".grid-cell")) deseleccionarNotaActual();
         });
     }
+    const allowed = localStorage.getItem(PORTRAIT_KEY) !== '0';
+    setPortraitMode(allowed);
 };
 
-// Ayudante inteligente para cambiar la Waveform
-function autoAjustarSelectoresDeWaveform(tieneVoces) {
-    if (!tieneVoces) {
-        document.getElementById('wave-select-enemy').value = 'inst';
-        document.getElementById('wave-select-player').value = 'inst';
-    } else {
-        document.getElementById('wave-select-enemy').value = 'v2';
-        document.getElementById('wave-select-player').value = 'v1';
+// v098: si ambas voces → enemy=v2 / player=v1; si no → Instrumental en ambos.
+// Definición canónica también en audio.js; esta copia se alinea si audio.js no cargó.
+function autoAjustarSelectoresDeWaveform(_tieneVoces) {
+    if (typeof window !== 'undefined' && window._autoAjustarSelectoresDeWaveformAudio) {
+        return window._autoAjustarSelectoresDeWaveformAudio(_tieneVoces);
     }
+    const selE = document.getElementById('wave-select-enemy');
+    const selP = document.getElementById('wave-select-player');
+    if (!selE || !selP) return;
+    const hayV1 = !!(typeof buffers !== 'undefined' && buffers && buffers.v1) || !!audioVoice1;
+    const hayV2 = !!(typeof buffers !== 'undefined' && buffers && buffers.v2) || !!audioVoice2;
+    if (hayV1 && hayV2) {
+        selE.value = 'v2';
+        selP.value = 'v1';
+        return;
+    }
+    const hayInst = !!(typeof buffers !== 'undefined' && buffers && buffers.inst) || !!audioInst;
+    selE.value = hayInst ? 'inst' : (hayV2 ? 'v2' : 'inst');
+    selP.value = hayInst ? 'inst' : (hayV1 ? 'v1' : 'inst');
 }
+try { window.autoAjustarSelectoresDeWaveform = autoAjustarSelectoresDeWaveform; } catch (e) {}
 
 function switchTab(tabId) {
     document.querySelectorAll(".tab-btn").forEach((btn) => btn.classList.remove("active"));
     document.querySelectorAll(".content-panel").forEach((panel) => panel.classList.remove("active"));
-    document.getElementById(`tab-${tabId}`).classList.add("active");
-    document.getElementById(`panel-${tabId}`).classList.add("active");
+    const tabBtn = document.getElementById(`tab-${tabId}`);
+    const panel = document.getElementById(`panel-${tabId}`);
+    if (tabBtn) tabBtn.classList.add("active");
+    if (panel) panel.classList.add("active");
+    if (tabId === "stage") document.body.classList.add("stage-editor-mode");
+    else document.body.classList.remove("stage-editor-mode");
 }
 
 function setTheme(themeName) {
     document.documentElement.setAttribute("data-theme", themeName);
-    document.querySelectorAll(".theme-select-card").forEach((c) => c.classList.remove("active-theme"));
+    document.querySelectorAll(".theme-select-card:not(.portrait-select-card)").forEach((c) => c.classList.remove("active-theme"));
     document.getElementById(`theme-${themeName}-btn`).classList.add("active-theme");
 }
 
@@ -63,8 +111,12 @@ function cambiarZoomDesdeAjustes(valor) {
     globalZoomFactor = parseFloat(valor);
     document.getElementById("zoom-val-display").innerText = globalZoomFactor.toFixed(2);
     if (currentChartData) {
-        actualizarAlturaScroll();
-        reposicionarScroll();
+        // Zoom no debe desincronizar: reloj = Inst, re-scroll + wave
+        if (typeof resyncTrasCambioGrilla === 'function') resyncTrasCambioGrilla();
+        else {
+            actualizarAlturaScroll();
+            if (typeof reposicionarScroll === 'function') reposicionarScroll(true);
+        }
     }
 }
 
@@ -112,21 +164,12 @@ async function crearProyectoFinalFiel() {
     
     if (!fileInst) { alert("El inst.ogg (Instrumental) es obligatorio."); return; }
 
-    if ((fileV1 && !fileV2) || (!fileV1 && fileV2)) {
-        alert("¡Error de Voces!\nSi agregas la pista de voz de un personaje, obligatoriamente debes agregar la del otro.\n(Sube las dos voces, o no subas ninguna).");
-        return; 
-    }
-    
+    // v096: una sola voz es válida (se reproduce la que exista)
     // GUARDAR AUDIOS EN LAS VARIABLES PARA EL ZIP
     fileRawInst = fileInst;
     fileRawV1 = fileV1 || null;
     fileRawV2 = fileV2 || null;
 
-    // NUEVO: CONDICIÓN ESTRICTA DE VOCES
-    if ((fileV1 && !fileV2) || (!fileV1 && fileV2)) {
-        alert("¡Error de Voces!\nSi agregas la pista de voz de un personaje, obligatoriamente debes agregar la del otro.\n(Sube las dos voces, o no subas ninguna).");
-        return; // Detiene el proceso
-    }
     
     const bpmInput = parseFloat(document.getElementById("song-bpm").value.trim());
     const nameInput = document.getElementById("song-name").value.trim();
@@ -144,14 +187,21 @@ async function crearProyectoFinalFiel() {
     btn.disabled = true;
     
     try {
-        audioInst = new Audio(URL.createObjectURL(fileInst));
-        if (fileV1) audioVoice1 = new Audio(URL.createObjectURL(fileV1));
-        if (fileV2) audioVoice2 = new Audio(URL.createObjectURL(fileV2));
+        audioInst = crearElementoAudio(fileInst);
+        if (fileV1) audioVoice1 = crearElementoAudio(fileV1);
+        if (fileV2) audioVoice2 = crearElementoAudio(fileV2);
         buffers.inst = await decodeAudioFile(fileInst);
         buffers.v1 = await decodeAudioFile(fileV1);
         buffers.v2 = await decodeAudioFile(fileV2);
-        
-        const duracionSegundos = buffers.inst.duration;
+        if (typeof reconstruirCacheWaveforms === 'function') reconstruirCacheWaveforms();
+        fijarVolumenPistas();
+        if (typeof resetWaPlaybackState === 'function') resetWaPlaybackState();
+        if (typeof sincronizarPistasAudio === 'function') sincronizarPistasAudio(0);
+
+        const duracionSegundos = (buffers.inst && buffers.inst.duration)
+            || (audioInst && audioInst.duration)
+            || 0;
+        if (!duracionSegundos) { alert("No se pudo obtener la duración del instrumental."); return; }
         const totalSteps = Math.ceil((bpmInput / 60) * duracionSegundos * 4);
         const filasFinales = Math.ceil(totalSteps / 16) * 16;
         
@@ -169,11 +219,14 @@ async function crearProyectoFinalFiel() {
             totalRows: filasFinales, notes: {},
         };
         asegurarDificultadesChart(currentChartData);
-        autoAjustarSelectoresDeWaveform(fileV1 && fileV2);
+        autoAjustarSelectoresDeWaveform(!!(fileV1 || fileV2));
         generarEstructuraGrilla(filasFinales);
         cargarDatosEnMesa(fileV1, fileV2, nameInput, bpmInput);
         cerrarModalNuevoChart();
         inicializarWorkspace();
+        if (typeof refrescarWaveformsTrasCarga === 'function') refrescarWaveformsTrasCarga();
+        else if (typeof actualizarWaveforms === 'function') setTimeout(() => actualizarWaveforms(null, true), 150);
+        if (typeof actualizarMenuArchivar === "function") actualizarMenuArchivar();
     } catch (err) { alert("Ocurrió un error leyendo los audios."); } 
     finally { btn.innerText = oldText; btn.disabled = false; }
 }
@@ -204,18 +257,28 @@ function sincronizarChartDesdeInterfaz() {
 
 // LOGICA DE BOTONES DE MENÚ Y EXPORTACIÓN
 function toggleMenuArchivos(event) {
-    event.stopPropagation();
-    document.getElementById("menu-archivos-wrapper").classList.toggle("open");
+    if (event) event.stopPropagation();
+    const archivos = document.getElementById("menu-archivos-wrapper");
+    const windows = document.getElementById("menu-windows-wrapper");
+    if (windows) windows.classList.remove("open");
+    if (archivos) archivos.classList.toggle("open");
+    if (typeof actualizarMenuArchivar === "function") actualizarMenuArchivar();
 }
 function toggleMenuWindows(event) {
-    event.stopPropagation();
-    document.getElementById("menu-windows-wrapper").classList.toggle("open");
+    if (event) event.stopPropagation();
+    const archivos = document.getElementById("menu-archivos-wrapper");
+    const windows = document.getElementById("menu-windows-wrapper");
+    if (archivos) archivos.classList.remove("open");
+    if (windows) windows.classList.toggle("open");
 }
-window.addEventListener("click", function () {
-    const wrapper = document.getElementById("menu-archivos-wrapper");
-    if (wrapper) wrapper.classList.remove("open");
-    const windowsWrapper = document.getElementById("menu-windows-wrapper");
-    if (windowsWrapper) windowsWrapper.classList.remove("open");
+// Cierra solo si el click/tap queda fuera de los wrappers (evita race táctil
+// donde el click sintético cerraba el menú justo tras abrirlo).
+window.addEventListener("click", function (e) {
+    const archivos = document.getElementById("menu-archivos-wrapper");
+    const windows = document.getElementById("menu-windows-wrapper");
+    const t = e.target;
+    if (archivos && !archivos.contains(t)) archivos.classList.remove("open");
+    if (windows && !windows.contains(t)) windows.classList.remove("open");
 });
 
 function abrirVentanaEvents() {
@@ -312,6 +375,7 @@ function actualizarMetadataDesdeInterfaz() {
     currentChartData.songName = leerTexto("metadata-song-name") || currentChartData.songName;
     currentChartData.author = leerTexto("metadata-composer");
     currentChartData.charter = leerTexto("metadata-charter");
+    const bpmAnterior = currentChartData.bpm;
     if (Number.isFinite(bpm) && bpm >= 20 && bpm <= 400) currentChartData.bpm = bpm;
     currentChartData.album = leerTexto("metadata-album");
     if (Number.isInteger(dificultad)) currentChartData.difficulty = Math.min(15, Math.max(1, dificultad));
@@ -325,16 +389,53 @@ function actualizarMetadataDesdeInterfaz() {
     document.getElementById("song-charter").value = currentChartData.charter;
     document.getElementById("display-song-name").innerText = currentChartData.songName;
     document.getElementById("display-song-bpm").innerText = "BPM: " + currentChartData.bpm;
+    // BPM/grilla: re-mapear scroll desde tiempo del Inst (evita desync)
+    if (Number.isFinite(bpm) && bpm !== bpmAnterior && typeof resyncTrasCambioGrilla === 'function') {
+        resyncTrasCambioGrilla();
+    }
     guardarProyectoActualLocalmente();
 }
 
 function guardarProyectoActualLocalmente() {
     if (!currentChartData?.id) return;
-    const proyectos = JSON.parse(localStorage.getItem("fnf_mobile_charts")) || [];
+    const proyectos = (typeof leerProyectosArchivadosLS === "function")
+        ? leerProyectosArchivadosLS()
+        : (JSON.parse(localStorage.getItem("fnf_mobile_charts") || "[]") || []);
     const indice = proyectos.findIndex((proyecto) => proyecto.id === currentChartData.id);
     if (indice === -1) return;
-    proyectos[indice] = currentChartData;
-    localStorage.setItem("fnf_mobile_charts", JSON.stringify(proyectos));
+    try {
+        const limpio = (typeof clonLimpiarChartParaLS === "function")
+            ? clonLimpiarChartParaLS(currentChartData)
+            : JSON.parse(JSON.stringify({
+                id: currentChartData.id,
+                songName: currentChartData.songName,
+                bpm: currentChartData.bpm,
+                author: currentChartData.author,
+                charter: currentChartData.charter,
+                speed: currentChartData.speed,
+                player: currentChartData.player,
+                opponent: currentChartData.opponent,
+                girlfriend: currentChartData.girlfriend,
+                album: currentChartData.album,
+                difficulty: currentChartData.difficulty,
+                stage: currentChartData.stage,
+                totalRows: currentChartData.totalRows,
+                activeDifficulty: currentChartData.activeDifficulty,
+                notes: currentChartData.notes || {},
+                events: currentChartData.events || {},
+                difficulties: currentChartData.difficulties,
+                archivado: true
+            }));
+        delete limpio.audioBase64;
+        proyectos[indice] = limpio;
+        if (typeof guardarProyectosArchivadosLS === "function") {
+            guardarProyectosArchivadosLS(proyectos);
+        } else {
+            localStorage.setItem("fnf_mobile_charts", JSON.stringify(proyectos));
+        }
+    } catch (e) {
+        console.warn("No se pudo actualizar el proyecto archivado en localStorage", e);
+    }
 }
 
 function alternarMinimizarEvents() {
@@ -356,6 +457,7 @@ function hacerVentanaEventsMovible() {
 
     cabecera.addEventListener("pointerdown", (event) => {
         if (event.target.closest("button")) return;
+        if (typeof esPortraitPermitidoActivo === "function" && esPortraitPermitidoActivo()) return;
         const rect = ventana.getBoundingClientRect();
         arrastrando = true;
         offsetX = event.clientX - rect.left;
@@ -384,6 +486,7 @@ function hacerVentanaMetadataMovible() {
     let offsetY = 0;
     cabecera.addEventListener("pointerdown", (event) => {
         if (event.target.closest("button")) return;
+        if (typeof esPortraitPermitidoActivo === "function" && esPortraitPermitidoActivo()) return;
         const rect = ventana.getBoundingClientRect();
         arrastrando = true;
         offsetX = event.clientX - rect.left;
@@ -410,6 +513,7 @@ function hacerVentanaHelpMovible() {
     let offsetY = 0;
     cabecera.addEventListener("pointerdown", (event) => {
         if (event.target.closest("button")) return;
+        if (typeof esPortraitPermitidoActivo === "function" && esPortraitPermitidoActivo()) return;
         const rect = ventana.getBoundingClientRect();
         arrastrando = true;
         offsetX = event.clientX - rect.left;
@@ -436,6 +540,7 @@ function hacerVentanaDificultadMovible() {
     let offsetY = 0;
     cabecera.addEventListener("pointerdown", (event) => {
         if (event.target.closest("button")) return;
+        if (typeof esPortraitPermitidoActivo === "function" && esPortraitPermitidoActivo()) return;
         const rect = ventana.getBoundingClientRect();
         arrastrando = true;
         offsetX = event.clientX - rect.left;
@@ -466,53 +571,7 @@ function menuNuevoChart() {
     abrirModalNuevoChart(); 
 }
 
-// NUEVA FUNCIÓN: Guarda el estado actual en el localStorage del navegador
-async function menuArchivarChart() {
-    if (!currentChartData) {
-        alert("No hay ningún chart abierto para archivar.");
-        return;
-    }
-
-    sincronizarChartDesdeInterfaz();
-    let proyectos = JSON.parse(localStorage.getItem("fnf_mobile_charts")) || [];
-    if (!currentChartData.id) {
-        currentChartData.id = "chart_" + Date.now();
-    }
-
-    // Convertir los audios cargados en formato base64 para almacenarlos sin perderlos
-    const audioData = {};
-    if (fileRawInst) audioData.inst = await blobToBase64(fileRawInst);
-    if (fileRawV1) audioData.v1 = await blobToBase64(fileRawV1);
-    if (fileRawV2) audioData.v2 = await blobToBase64(fileRawV2);
-
-    currentChartData.audioBase64 = audioData;
-
-    const index = proyectos.findIndex((p) => p.id === currentChartData.id);
-    if (index !== -1) {
-        proyectos[index] = currentChartData;
-    } else {
-        proyectos.push(currentChartData);
-    }
-
-    try {
-        localStorage.setItem("fnf_mobile_charts", JSON.stringify(proyectos));
-        alert("¡Chart y audios archivados exitosamente en la memoria de tu navegador!");
-    } catch (e) {
-        alert("Atención: El archivo de audio es muy grande para el almacenamiento local del navegador. Se guardará únicamente el chart de notas.");
-        delete currentChartData.audioBase64;
-        localStorage.setItem("fnf_mobile_charts", JSON.stringify(proyectos));
-    }
-}
-
-// Convertidor auxiliar de archivos Blob a String Base64
-function blobToBase64(blob) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-    });
-}
+// menuArchivarChart / blob audio → js/archivador.js (IndexedDB + localStorage limpio)
 
 // ==========================================
 // --- EXPORTAR ARCHIVO .FNFC CON AUDIOS ---
@@ -534,17 +593,26 @@ function convertirEventosVSlice(eventos, stepDuration) {
     return Object.entries(eventos || {}).map(([row, evento]) => {
         const fila = parseInt(row, 10);
         if (!Number.isInteger(fila) || !evento) return null;
+        // V-Slice: 0=opponent, 1=player, 2=gf (mismo orden que convertirEventosExternos)
+        // target "position" no tiene char de personaje; se omite char y se usan x/y
         const targetToChar = { opponent: 1, player: 0, gf: 2 };
+        const valores = {
+            "x": Number(evento.offsetX) || 0,
+            "duration": 4,
+            "y": Number(evento.offsetY) || 0,
+            "ease": "CLASSIC"
+        };
+        if (evento.target === "position") {
+            // Cámara a coordenadas: sin char de personaje (offsets ya van en x/y)
+        } else {
+            valores.char = Object.prototype.hasOwnProperty.call(targetToChar, evento.target)
+                ? targetToChar[evento.target]
+                : 0;
+        }
         return {
             "t": fila * stepDuration * 1000,
             "e": "FocusCamera",
-            "v": {
-                "x": Number(evento.offsetX) || 0,
-                "duration": 4,
-                "y": Number(evento.offsetY) || 0,
-                "ease": "CLASSIC",
-                "char": targetToChar[evento.target] ?? 0
-            }
+            "v": valores
         };
     }).filter(Boolean).sort((a, b) => a.t - b.t);
 }
@@ -605,7 +673,6 @@ function menuGuardarChartTo() {
         dificultadesRaw.normal = { notes: notasActivas, events: chartActual?.events || {} };
     }
 
-    console.log("Generando empaquetado oficial FNF V-Slice .fnfc con audios... Dificultades:", ordenadas);
     const zip = new JSZip();
     const songNameId = inputSongName.toLowerCase().replace(/[^a-z0-9_-]+/g, "-");
 
@@ -657,39 +724,18 @@ function menuGuardarChartTo() {
 
     // 2. CONSTRUCCIÓN DE SONG-CHART.JSON
     // - notes: por dificultad (easy / normal / hard).
-    // - events: UN SOLO ARRAY GLOBAL a nivel raíz, NO por dificultad.
-    //   El usuario confirma que los FocusCamera son iguales en todas las dificultades.
-    //   Así que hacemos merge de todas las dificultades, eliminamos duplicados
-    //   y ordenamos por tiempo "t".
+    // - events: UN SOLO ARRAY GLOBAL a nivel raíz (eventos compartidos en el editor).
     const stepDuration = (60 / inputBPM) / 4;
     const vSliceNotes = {};
-    const eventsPool = new Map(); // clave = `${t}@${e}@${char}@${x}@${y}`  para dedupe
     ordenadas.forEach((nombre) => {
         const diff = dificultadesRaw[nombre] || { notes: {}, events: {} };
         vSliceNotes[nombre] = convertirNotasVSlice(diff.notes, stepDuration);
-        const evList = convertirEventosVSlice(diff.events, stepDuration);
-        if (Array.isArray(evList)) {
-            evList.forEach((ev) => {
-                try {
-                    if (!ev || !ev.v) return;
-                    const t = Number(ev.t) || 0;
-                    const e = String(ev.e || "");
-                    const c = Number(ev.v.char ?? 0);
-                    const x = Number(ev.v.x ?? 0);
-                    const y = Number(ev.v.y ?? 0);
-                    const d = Number(ev.v.duration ?? 0);
-                    const ease = String(ev.v.ease || "");
-                    const k = `${t}|${e}|${c}|${x}|${y}|${d}|${ease}`;
-                    if (!eventsPool.has(k)) eventsPool.set(k, ev);
-                } catch(_) {}
-            });
-        }
     });
-    const vSliceEvents = Array.from(eventsPool.values()).sort((a, b) => {
-        const ta = Number(a && a.t) || 0;
-        const tb = Number(b && b.t) || 0;
-        return ta - tb;
-    });
+    // Leer events una sola vez desde la referencia compartida (chart.events)
+    const eventosCompartidos = chartActual?.events
+        || (ordenadas[0] && dificultadesRaw[ordenadas[0]]?.events)
+        || {};
+    const vSliceEvents = convertirEventosVSlice(eventosCompartidos, stepDuration);
 
     const chartData = {
         "version": "2.0.0",
@@ -766,11 +812,7 @@ async function procesarReVinculacionAudios() {
         return;
     }
 
-    if ((fileV1 && !fileV2) || (!fileV1 && fileV2)) {
-        alert("¡Error de Voces!\nSi agregas la pista de voz de un personaje, obligatoriamente debes agregar la del otro.");
-        return;
-    }
-
+    // v096: una sola voz es válida
     if (isPlaying) togglePlayPause();
 
     const btn = document.getElementById("btn-revincular-final");
@@ -779,30 +821,34 @@ async function procesarReVinculacionAudios() {
     btn.disabled = true;
 
     try {
-        // Liberamos la memoria de audios anteriores por si acaso
+        // Liberamos WA + HTMLAudio anteriores
+        if (typeof resetWaPlaybackState === 'function') resetWaPlaybackState();
         if (audioInst) { audioInst.pause(); audioInst = null; }
         if (audioVoice1) { audioVoice1.pause(); audioVoice1 = null; }
         if (audioVoice2) { audioVoice2.pause(); audioVoice2 = null; }
         
-        // Creamos los nuevos reproductores con los archivos recién subidos
-        audioInst = new Audio(URL.createObjectURL(fileInst));
-        if (fileV1) audioVoice1 = new Audio(URL.createObjectURL(fileV1));
-        if (fileV2) audioVoice2 = new Audio(URL.createObjectURL(fileV2));
+        // v096: HTMLAudio es playback primario; buffers solo para waveforms
+        audioInst = crearElementoAudio(fileInst);
+        if (fileV1) audioVoice1 = crearElementoAudio(fileV1);
+        if (fileV2) audioVoice2 = crearElementoAudio(fileV2);
 
-        // Decodificamos para dibujar las Waveforms
         buffers.inst = await decodeAudioFile(fileInst);
         buffers.v1 = await decodeAudioFile(fileV1);
         buffers.v2 = await decodeAudioFile(fileV2);
+        if (typeof reconstruirCacheWaveforms === 'function') reconstruirCacheWaveforms();
+        fijarVolumenPistas();
+        aplicarMuteEstadosUI();
 
-        // Actualizamos los textos de la interfaz con los nuevos nombres
         fileRawInst = fileInst;
         fileRawV1 = fileV1 || null;
         fileRawV2 = fileV2 || null;
-        autoAjustarSelectoresDeWaveform(fileV1 && fileV2);
+        autoAjustarSelectoresDeWaveform(!!(fileV1 || fileV2));
         cargarDatosEnMesa(fileV1, fileV2, currentChartData.songName, currentChartData.bpm);
-        
-        // Redibujamos la gráfica
-        actualizarWaveforms();
+
+        if (typeof resetWaPlaybackState === 'function') resetWaPlaybackState();
+        sincronizarPistasAudio(0);
+        if (typeof refrescarWaveformsTrasCarga === 'function') refrescarWaveformsTrasCarga();
+        else if (typeof actualizarWaveforms === 'function') actualizarWaveforms(0, true);
         
         cerrarModalReVincularAudios();
         
