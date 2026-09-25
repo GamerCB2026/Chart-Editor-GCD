@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gcd-chart-editor-v082fix';
+const CACHE_NAME = 'gcd-chart-editor-v081-publico';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -9,9 +9,6 @@ const CORE_ASSETS = [
   './css/ImportChartMenu.css',
   './css/mobile.css',
   './css/StageEditor.css',
-  './css/membresia.css',
-  './js/membresia.js',
-  './js/SisMiembros.js',
   './js/variables.js',
   './js/audio.js',
   './js/charter.js',
