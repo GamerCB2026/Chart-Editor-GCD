@@ -81,7 +81,7 @@ body, html {
 }
 
 @media (orientation: portrait) {
-    #orientation-warning {
-        display: flex; 
+    body:not(.portrait-allowed) #orientation-warning {
+        display: flex;
     }
 }

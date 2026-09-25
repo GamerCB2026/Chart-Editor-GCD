@@ -1,0 +1,315 @@
+/* Gate de membresía YouTube — tema oscuro GCD */
+
+body.sm-locked #main-menu,
+body.sm-locked #editor-workspace {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+body.sm-locked .beta-badge {
+  opacity: 0.35;
+}
+
+#membresia-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(74, 40, 122, 0.55), transparent 55%),
+    radial-gradient(ellipse at 70% 80%, rgba(214, 36, 78, 0.25), transparent 50%),
+    #12121a;
+  color: #fff;
+}
+
+body:not(.sm-locked) #membresia-gate {
+  display: none;
+}
+
+.membresia-gate-card {
+  width: 100%;
+  max-width: 420px;
+  background: linear-gradient(180deg, #252233 0%, #1a1824 100%);
+  border: 1px solid #332f42;
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+  padding: 28px 24px 22px;
+  text-align: center;
+}
+
+.membresia-gate-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #ff5b84;
+  border: 1px solid #ff5b84;
+  border-radius: 4px;
+  padding: 3px 8px;
+  margin-bottom: 14px;
+  background: #161421;
+}
+
+#membresia-gate-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0 0 10px;
+  line-height: 1.25;
+  color: #fff;
+}
+
+.membresia-gate-sub {
+  font-size: 13px;
+  color: #a0a0b0;
+  margin: 0 0 16px;
+  line-height: 1.45;
+}
+
+.membresia-gate-sub strong {
+  color: #e8e6f0;
+}
+
+.membresia-status {
+  min-height: 1.4em;
+  font-size: 12px;
+  margin: 0 0 14px;
+  line-height: 1.4;
+  color: #a0a0b0;
+}
+
+.membresia-status--info { color: #a0a0b0; }
+.membresia-status--ok { color: #6ddea8; }
+.membresia-status--warn { color: #f0c36d; }
+.membresia-status--error { color: #ff7b9a; }
+
+.membresia-btn-google {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #fff;
+  color: #1f1f1f;
+  transition: transform 0.15s, opacity 0.15s;
+}
+
+.membresia-btn-google:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.membresia-btn-google:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.membresia-btn-google i {
+  color: #4285f4;
+  font-size: 16px;
+}
+
+.membresia-btn-dev {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  border: 1px dashed #665f80;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: transparent;
+  color: #cccbdf;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.membresia-btn-dev:hover {
+  border-color: #ff5b84;
+  color: #fff;
+}
+
+.membresia-btn-dev[hidden] {
+  display: none !important;
+}
+
+.membresia-setup-help {
+  margin-top: 14px;
+  text-align: left;
+  font-size: 12px;
+  color: #a0a0b0;
+  background: #161421;
+  border: 1px solid #332f42;
+  border-radius: 10px;
+  padding: 12px 14px;
+  line-height: 1.45;
+}
+
+.membresia-setup-help[hidden] {
+  display: none !important;
+}
+
+.membresia-setup-help ol {
+  margin: 8px 0 0 18px;
+  padding: 0;
+}
+
+.membresia-setup-help code {
+  font-size: 11px;
+  color: #ff5b84;
+  background: #1e1c28;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.membresia-join-link {
+  display: inline-block;
+  margin-top: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ff5b84;
+  text-decoration: none;
+}
+
+.membresia-join-link:hover {
+  text-decoration: underline;
+}
+
+.membresia-gate-foot {
+  margin: 12px 0 0;
+  font-size: 11px;
+  color: #b4b0c4; /* ≥4.5:1 on #1a1824 card */
+}
+
+/* Chip de cuenta (menú principal) */
+.membresia-account-chip {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 10px 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #161421;
+  border: 1px solid #332f42;
+  color: #e8e6f0;
+  font-size: 11px;
+  max-width: 100%;
+}
+
+.membresia-chip-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #332f42;
+}
+
+.membresia-chip-email {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.membresia-chip-logout {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #332f42;
+  color: #cccbdf;
+}
+
+.membresia-chip-logout:hover {
+  background: #d6244e;
+  color: #fff;
+}
+
+@media (max-width: 520px) {
+  .membresia-gate-card {
+    padding: 22px 16px 18px;
+  }
+  #membresia-gate-title {
+    font-size: 1.15rem;
+  }
+}
+
+
+.membresia-step-channel {
+  text-align: left;
+  margin: 0 0 12px;
+}
+
+.membresia-channel-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #cccbdf;
+  margin-bottom: 6px;
+}
+
+.membresia-channel-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #332f42;
+  background: #110f1a;
+  color: #fff;
+  font-size: 13px;
+  font-family: monospace;
+}
+
+.membresia-channel-input:focus {
+  outline: none;
+  border-color: #5b84ff;
+}
+
+.membresia-channel-hint {
+  font-size: 11px;
+  color: #8a8799;
+  margin: 8px 0 12px;
+  line-height: 1.4;
+}
+
+.membresia-btn-verify {
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 10px;
+  background: #d6244e;
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.membresia-btn-verify:hover { filter: brightness(1.08); }
+.membresia-btn-verify:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.membresia-btn-back {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #332f42;
+  border-radius: 8px;
+  background: transparent;
+  color: #a0a0b0;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.membresia-btn-back:hover { color: #fff; border-color: #5a5470; }
