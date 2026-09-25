@@ -170,10 +170,10 @@ function getMasterSongTime() {
         }
         return Math.max(0, _waPlay.pausedSongTime || 0);
     }
-    // Preferir currentTime de voces (misma pista que oye el chartador)
+    // Inst primero (como cuando las flechas iban bien); voces solo si no hay Inst
+    if (audioInst && Number.isFinite(audioInst.currentTime)) return audioInst.currentTime;
     if (audioVoice1 && Number.isFinite(audioVoice1.currentTime)) return audioVoice1.currentTime;
     if (audioVoice2 && Number.isFinite(audioVoice2.currentTime)) return audioVoice2.currentTime;
-    if (audioInst && Number.isFinite(audioInst.currentTime)) return audioInst.currentTime;
     return 0;
 }
 

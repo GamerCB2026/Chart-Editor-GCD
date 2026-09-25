@@ -152,6 +152,11 @@ function convertirChartExterno(data) {
 	const bpm = parseFloat(root.bpm || data.bpm) || 160;
 	const speedValue = typeof root.scrollSpeed === "object" ? root.scrollSpeed.normal : root.scrollSpeed;
 	const stepMs = 60000 / bpm / 4;
+	// Offset del instrumental (V-Slice metadata.offsets.instrumental, ms).
+	// En el juego la musica suena en (tiempoNota - offset), asi que se resta para que
+	// cada flecha caiga donde suena en el archivo de audio.
+	const offsetMs = parseFloat(data.importOffsetMs) || 0;
+	const agregar = (n, timeMs, lane, sus) => agregarNotaImportada(n, (parseFloat(timeMs) || 0) - offsetMs, lane, sus, stepMs);
 	const notes = {};
 	let maxRow = 0;
 
@@ -160,7 +165,7 @@ function convertirChartExterno(data) {
 			(section.sectionNotes || []).forEach((note) => {
 				const noteData = parseInt(note[1], 10);
 				if (Number.isNaN(noteData) || noteData < 0 || noteData > 7) return;
-				maxRow = Math.max(maxRow, agregarNotaImportada(notes, note[0], noteData, note[2], stepMs));
+				maxRow = Math.max(maxRow, agregar(notes, note[0], noteData, note[2]));
 			});
 		});
 	} else if (Array.isArray(root.strumLines || root.strumlines)) {
@@ -175,7 +180,7 @@ function convertirChartExterno(data) {
 				const lane = parseInt(note.id ?? note.d ?? note.lane ?? note.noteData, 10);
 				if (Number.isNaN(lane)) return;
 				const col = lane > 3 ? lane % 8 : offset + lane;
-				maxRow = Math.max(maxRow, agregarNotaImportada(notes, note.time ?? note.t, col, note.sLen ?? note.l ?? note.sustainLength, stepMs));
+				maxRow = Math.max(maxRow, agregar(notes, note.time ?? note.t, col, note.sLen ?? note.l ?? note.sustainLength));
 			});
 		});
 	} else {
@@ -187,7 +192,7 @@ function convertirChartExterno(data) {
 				const sustain = note.l ?? note.sLen ?? note.sustainLength ?? note[2];
 				if (Number.isNaN(lane)) return;
 				const col = lane % 8;
-				maxRow = Math.max(maxRow, agregarNotaImportada(notes, time, col, sustain, stepMs));
+				maxRow = Math.max(maxRow, agregar(notes, time, col, sustain));
 			});
 		}
 	}
@@ -406,6 +411,7 @@ async function procesarArchivoFNFC(input) {
 			const chartJson = JSON.parse(await chartFile.async("string"));
 
 			const metadata = cargarMetadatosImportados(metaJson, chartJson);
+			const offsetInstMs = parseFloat(metaJson && metaJson.offsets && metaJson.offsets.instrumental) || 0;
 			const notasPorDificultad = chartJson.notes && typeof chartJson.notes === "object" && !Array.isArray(chartJson.notes)
 				? chartJson.notes
 				: { normal: chartJson.notes };
@@ -418,6 +424,7 @@ async function procesarArchivoFNFC(input) {
 					notes: notasPorDificultad[nombre],
 					events: chartJson.events?.[nombre] || chartJson.events,
 					difficultyName: nombre,
+					importOffsetMs: offsetInstMs,
 					scrollSpeed: chartJson.scrollSpeed?.[nombre] ?? metadata.speed
 				});
 				if (dificultad) {
@@ -430,6 +437,7 @@ async function procesarArchivoFNFC(input) {
 				...metadata,
 				notes: notasPorDificultad.normal || notasPorDificultad[Object.keys(notasPorDificultad)[0]] || {},
 				events: chartJson.events?.normal || chartJson.events,
+				importOffsetMs: offsetInstMs,
 				scrollSpeed: chartJson.scrollSpeed ?? metadata.speed
 			});
 			if (!chart) throw new Error("Chart sin notas reconocibles");
