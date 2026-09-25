@@ -6,8 +6,8 @@
 const AUDIO_DRIFT_MAX_SEC = 0.020; // legacy; HTML fallback uses 80ms
 const AUDIO_HTML_SYNC_MS = 300;
 const AUDIO_HTML_DRIFT_SEC = 0.080;
-const WAVE_PEAKS_PPS = 280;
-const WAVE_PLAY_MIN_MS = 33;
+const WAVE_PEAKS_PPS = 500; // resolucion objetivo; la real se guarda por pista
+const WAVE_PLAY_MIN_MS = 0; // redibujar cada frame para que la onda no se quede atras
 
 let wavePeaks = { inst: null, v1: null, v2: null };
 let _lastWaveDrawMs = 0;
@@ -361,7 +361,7 @@ function rebuildWavePeaksForKey(key, buffer) {
     const channels = [];
     for (let c = 0; c < nCh; c++) channels.push(buffer.getChannelData(c));
     const len = channels[0].length;
-    const samplesPerPeak = Math.max(1, Math.floor(buffer.sampleRate / WAVE_PEAKS_PPS));
+    const samplesPerPeak = Math.max(1, Math.round(buffer.sampleRate / WAVE_PEAKS_PPS));
     const n = Math.ceil(len / samplesPerPeak);
     const peaks = new Float32Array(n);
     let peakMax = 0;
@@ -383,7 +383,9 @@ function rebuildWavePeaksForKey(key, buffer) {
         const boost = 0.85 / peakMax;
         for (let i = 0; i < n; i++) peaks[i] *= boost;
     }
-    wavePeaks[key] = { peaks, duration: buffer.duration, pps: WAVE_PEAKS_PPS };
+    // pps REAL (sampleRate / samplesPerPeak). Antes se guardaba 280 fijo aunque el real era
+    // ~280.9 (44.1k) o ~280.7 (48k), y la onda se iba corriendo cada vez mas con la cancion.
+    wavePeaks[key] = { peaks, duration: buffer.duration, pps: buffer.sampleRate / samplesPerPeak };
 }
 
 /** Llamar tras cargar/decodificar buffers (inst/v1/v2) — solo waveforms. */
