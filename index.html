@@ -1,10 +1,16 @@
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
 <head>
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#000000">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FNF Chart Editor GCD Beta 1 V0.8.0</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>FNF Chart Editor GCD BugFix/Update - V0.8.1 BETA 1 </title>
+    <meta name="description" content="FNF Chart Editor GCD es una herramienta web para crear y editar charts de Friday Night Funkin V-Slice.">
+    <meta name="google-site-verification" content="HoPFeGB2vyj6WGcWtANG3RN5dgnxbF1lW8QlIJo7qxg" />
     
     <!-- LIBRERÍA DE ICONOS: FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -14,10 +20,17 @@
     <link rel="stylesheet" href="css/menu.css">
     <link rel="stylesheet" href="css/charter.css">
     <link rel="stylesheet" href="css/ImportChartMenu.css">
+    <link rel="stylesheet" href="css/mobile.css">
+    <link rel="stylesheet" href="css/StageEditor.css">
+    <link rel="stylesheet" href="css/membresia.css">
 </head>
-<body>
+<body class="sm-locked portrait-allowed">
 
-    <div class="beta-badge">BETA 1</div>
+    <div id="membresia-gate" role="dialog" aria-modal="true" aria-labelledby="membresia-gate-title" aria-hidden="false">
+        <!-- Contenido rellenado/asegurado por js/membresia.js -->
+    </div>
+
+    <div class="beta-badge">V0.8.1</div>
 
     <input type="file" id="import-fnfc-input" accept=".fnfc" style="display: none;" onchange="procesarArchivoFNFC(this)">
     <input type="file" id="import-codename-input" accept=".json" style="display: none;" onchange="procesarArchivoCodename(this)">
@@ -29,7 +42,10 @@
     <div id="main-menu">
         <div class="sidebar-tabs">
             <button class="tab-btn active" id="tab-recientes" onclick="switchTab('recientes')">
-                <img src="Icons/Projects.png" class="menu-icon icon-projects" alt=""> Proyectos
+                <img src="Icons/Projects.png" class="menu-icon icon-projects" alt=""> Proyectos Chart Editor
+            </button>
+            <button class="tab-btn tab-btn-stage" id="tab-stage" type="button" onclick="switchTab('stage')">
+                <i class="fa-solid fa-cubes menu-icon-fa"></i> Proyectos Stage Editor
             </button>
             <button class="tab-btn" id="tab-ajustes" onclick="switchTab('ajustes')">
                 <img src="Icons/Config.png" class="menu-icon icon-config" alt=""> Ajustes App
@@ -41,10 +57,24 @@
 
         <div id="panel-recientes" class="content-panel active">
             <div class="panel-header">
-                <h1 class="panel-title">Tus Proyectos Archivados</h1>
-                <p class="panel-subtitle">Charts guardados en la memoria local de este navegador.</p>
+                <h1 class="panel-title">Proyectos Chart Editor</h1>
+                <p class="panel-subtitle">Charts archivados en este navegador.</p>
             </div>
             <div class="folder-grid" id="lista-proyectos-grid"></div>
+        </div>
+
+
+        <div id="panel-stage" class="content-panel">
+            <div class="panel-header">
+                <h1 class="panel-title">Stage Editor</h1>
+                <p class="panel-subtitle">Próximamente…</p>
+            </div>
+            <div class="stage-editor-hero">
+                <div class="stage-editor-hero-icon"><i class="fa-solid fa-cubes"></i></div>
+                <h1>Stage Editor</h1>
+                <p>Próximamente podrás editar escenarios y capas de stage desde aquí. Esta sección está en construcción.</p>
+                <span class="stage-editor-badge">Próximamente</span>
+            </div>
         </div>
 
         <div id="panel-ajustes" class="content-panel">
@@ -68,9 +98,19 @@
                         <div class="setting-name">Zoom de la Grilla (Escala)</div>
                         <div class="setting-desc">Ajusta el tamaño del área de notas para pantallas pequeñas.</div>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 12px; width: 45%;">
+                    <div style="display: flex; align-items: center; gap: 12px; width: 45%;" id="zoom-setting-control">
                         <input type="range" id="setting-zoom" min="0.4" max="1" step="0.05" value="0.65" style="flex:1;" oninput="cambiarZoomDesdeAjustes(this.value)">
                         <span id="zoom-val-display" style="font-family: monospace; font-weight: bold; min-width: 35px; color: var(--text-main);">0.65</span>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-name">Modo vertical</div>
+                        <div class="setting-desc">Permite usar el editor en orientación vertical sin pedir girar el celular.</div>
+                    </div>
+                    <div class="theme-selector-row">
+                        <div class="theme-select-card portrait-select-card active-theme" id="portrait-on-btn" onclick="setPortraitMode(true)"><i class="fa-solid fa-mobile-screen"></i> Activado</div>
+                        <div class="theme-select-card portrait-select-card" id="portrait-off-btn" onclick="setPortraitMode(false)"><i class="fa-solid fa-ban"></i> Desactivado</div>
                     </div>
                 </div>
             </div>
@@ -111,6 +151,8 @@
         </div>
     </div>
 
+
+
     <div id="editor-workspace">
         <div class="top-menu-bar">
             <div class="menu-item-wrapper" id="menu-archivos-wrapper">
@@ -119,8 +161,11 @@
                     <div class="dropdown-item" onclick="menuNuevoChart()"><i class="fa-solid fa-file-circle-plus" style="margin-right: 6px;"></i> Nuevo Chart</div>
                     <div class="dropdown-item" onclick="menuAbrirChart()"><i class="fa-solid fa-folder-open" style="margin-right: 6px;"></i> Abrir Chart (.fnfc)</div>
                     
-                    <!-- NUEVO BOTÓN: Archivar Chart -->
-                    <div class="dropdown-item" onclick="menuArchivarChart()"><i class="fa-solid fa-box-archive" style="margin-right: 6px; color: #5de7ff;"></i> Archivar Chart</div>
+                    <!-- Archivar / Guardar En El Archivador -->
+                    <div class="dropdown-item" id="menu-item-archivar" onclick="menuArchivarChart()">
+                        <i class="fa-solid fa-box-archive" style="margin-right: 6px; color: #5de7ff;"></i>
+                        <span id="menu-item-archivar-label">Archivar Chart</span>
+                    </div>
                     
                     <div class="dropdown-item" onclick="menuGuardarChartTo()"><i class="fa-solid fa-floppy-disk" style="margin-right: 6px;"></i> Guardar Chart a...</div>
                     <div class="dropdown-divider"></div>
@@ -141,6 +186,12 @@
             <div class="top-menu-btn" onclick="abrirVentanaHelp()">HELP</div>
             <div class="top-prototype-text">PROTOTYPE Functionality is subject to change.</div>
         </div>
+
+        <div class="mobile-editor-toolbar" id="mobile-editor-toolbar">
+  <button type="button" class="mobile-tool-btn" onclick="toggleMobilePanel('left')" aria-label="Audio y controles"><i class="fa-solid fa-sliders"></i> Audio</button>
+  <button type="button" class="mobile-tool-btn mobile-tool-play" id="btn-play-pause-mobile" onclick="togglePlayPause()"><i class="fa-solid fa-play"></i> Play</button>
+</div>
+<div class="mobile-panel-backdrop" id="mobile-panel-backdrop" onclick="closeMobilePanels()"></div>
 
         <div class="workspace-body">
             <div class="control-panel-left">
@@ -175,18 +226,18 @@
                 <div style="margin-top: 15px;" class="panel-section-title">Visualizar Waveforms</div>
                 <div class="audio-box">
                     <label style="font-size: 11px; color: var(--text-sub);">Lado Enemigo</label>
-                    <select id="wave-select-enemy" onchange="actualizarWaveforms()" class="speed-input-field">
+                    <select id="wave-select-enemy" onchange="actualizarWaveforms(null, true)" class="speed-input-field">
                         <option value="none">Ninguno</option>
-                        <option value="inst">Instrumental</option>
-                        <option value="v2" selected>Voz Enemigo</option>
+                        <option value="inst" selected>Instrumental</option>
+                        <option value="v2">Voz Enemigo</option>
                         <option value="v1">Voz Jugador</option>
                     </select>
                     <label style="font-size: 11px; color: var(--text-sub); margin-top: 5px;">Lado Jugador</label>
-                    <select id="wave-select-player" onchange="actualizarWaveforms()" class="speed-input-field">
+                    <select id="wave-select-player" onchange="actualizarWaveforms(null, true)" class="speed-input-field">
                         <option value="none">Ninguno</option>
-                        <option value="inst">Instrumental</option>
+                        <option value="inst" selected>Instrumental</option>
                         <option value="v2">Voz Enemigo</option>
-                        <option value="v1" selected>Voz Jugador</option>
+                        <option value="v1">Voz Jugador</option>
                     </select>
                 </div>
 
@@ -215,8 +266,6 @@
                         </label>
                     </div>
 
-                    <div style="font-size: 11px; color: var(--text-sub); font-weight: bold; margin-top: 15px; margin-bottom: 8px;"><i class="fa-solid fa-music"></i> Volumen Música</div>
-                    <input type="range" id="song-volume-slider" min="0" max="1" step="0.05" value="0.4" oninput="actualizarVolumenCancion(this.value)" style="width: 100%; accent-color: #d6244e; cursor: pointer;">
                 </div>
             </div>
 
@@ -246,22 +295,18 @@
                     <button class="sustain-btn btn-extender" onclick="ajustarLongitudNota(1)"><i class="fa-solid fa-caret-down"></i> Extender</button>
                 </div>
 
-                <div style="margin-top: 25px;" class="panel-section-title">Personajes</div>
-                <div class="character-icons-container" style="display: flex; gap: 10px; margin-top: 10px; width: 100%;">
-                    <div class="sidebar-icon-box" style="flex: 1; display: flex; flex-direction: column; align-items: center;">
-                        <span style="font-size: 9px; color: var(--text-editor-title); font-weight: bold; margin-bottom: 4px;">OPPONENT</span>
-                        <div class="icon-slot" style="width: 100%; height: 50px; background-color: var(--bg-editor-input); border: 1px solid var(--border-editor-panel); border-radius: 5px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                            <img id="sidebar-icon-opponent" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23161421'/></svg>" alt="" style="max-width: 90%; max-height: 90%; object-fit: contain; image-rendering: pixelated;">
-                        </div>
-                    </div>
-                    <div class="sidebar-icon-box" style="flex: 1; display: flex; flex-direction: column; align-items: center;">
-                        <span style="font-size: 9px; color: var(--text-editor-title); font-weight: bold; margin-bottom: 4px;">PLAYER</span>
-                        <div class="icon-slot" style="width: 100%; height: 50px; background-color: var(--bg-editor-input); border: 1px solid var(--border-editor-panel); border-radius: 5px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                            <img id="sidebar-icon-player" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23161421'/></svg>" alt="" style="max-width: 90%; max-height: 90%; object-fit: contain; image-rendering: pixelated;">
-                        </div>
-                    </div>
-                </div>
             </div>
+        </div>
+
+        <div id="mobile-sustain-bar" class="mobile-sustain-bar" aria-label="Controles de sustain">
+            <button type="button" class="mobile-sustain-btn btn-recortar" onclick="ajustarLongitudNota(-1)" aria-label="Recortar sustain">
+                <i class="fa-solid fa-arrow-up"></i>
+                <span>Recortar</span>
+            </button>
+            <button type="button" class="mobile-sustain-btn btn-extender" onclick="ajustarLongitudNota(1)" aria-label="Extender sustain">
+                <i class="fa-solid fa-arrow-down"></i>
+                <span>Extender</span>
+            </button>
         </div>
 
         <div class="bottom-playback-bar">
@@ -390,9 +435,9 @@
             </div>
             <section>
                 <h3>Inicio y archivos</h3>
-                <p><strong>Nuevo Chart:</strong> escribe nombre, BPM, compositor y charter. Después carga el instrumental y, opcionalmente, las dos voces.</p>
+                <p><strong>Nuevo Chart:</strong> escribe nombre, BPM, compositor y charter. Después carga el instrumental y, opcionalmente, las dos voces. En el Paso 1 también puedes <strong>Importar .fnfc</strong> para abrir un chart existente.</p>
                 <p><strong>Abrir Chart:</strong> importa un archivo <code>.fnfc</code> con sus notas, eventos, metadata y audios incluidos.</p>
-                <p><strong>Archivar Chart:</strong> guarda el proyecto en este navegador. Usa <strong>Re-vincular</strong> para volver a cargar los audios si el navegador los elimina.</p>
+                <p><strong>Archivar / Guardar En El Archivador:</strong> guarda notas/eventos en este navegador y los audios en IndexedDB (persisten al reabrir). Solo usa <strong>Re-vincular</strong> si faltan audios.</p>
             </section>
             <section>
                 <h3>Editor de notas</h3>
@@ -407,7 +452,7 @@
             </section>
             <section>
                 <h3>Audio y reproducción</h3>
-                <p>El instrumental marca el tiempo principal. Las voces se sincronizan al iniciar, pausar, reanudar o mover el scroll. Elige las waveforms, mutea pistas y ajusta el volumen desde el panel izquierdo.</p>
+                <p>Inst es el reloj maestro; las voces se reproducen con HTMLAudio y se hard-sincronizan al Inst. Elige las waveforms y mutea pistas desde el panel izquierdo. El volumen de Inst/Voces está fijo al máximo (ritmo normal).</p>
                 <p>Activa los hitsounds para escuchar una señal al pasar por las notas durante la reproducción.</p>
             </section>
             <section>
@@ -472,6 +517,19 @@
                     <div class="form-group">
                         <label>Charter</label>
                         <input type="text" id="song-charter" class="modal-input" value="Deiby">
+                    </div>
+                    <div class="fnfc-import-from-paso1" style="margin-top: 4px; padding-top: 12px; border-top: 1px solid #332f42; display: flex; flex-direction: column; gap: 8px; align-items: stretch;">
+                        <div style="display: flex; align-items: center; gap: 10px; color: #a4a1b5; font-size: 11px; text-transform: uppercase; font-weight: 600; letter-spacing: 0.04em;">
+                            <span style="flex:1; height:1px; background:#332f42;"></span>
+                            <span>o importa un chart existente</span>
+                            <span style="flex:1; height:1px; background:#332f42;"></span>
+                        </div>
+                        <button type="button" class="btn btn-confirm" style="background:#3d5afe; width:100%;" onclick="document.getElementById('import-fnfc-input').click()">
+                            <i class="fa-solid fa-file-import" style="margin-right:6px;"></i> Importar .fnfc
+                        </button>
+                        <p style="font-size:11px; color:var(--text-sub); line-height:1.4; margin:0; text-align:center;">
+                            Abre el chart con notas, eventos y audio sin crear uno desde cero.
+                        </p>
                     </div>
                 </div>
                 <div class="modal-buttons">
@@ -563,12 +621,26 @@
             </div>
         </div>
     </div>
+    
+    <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('Service Worker registrado con éxito', reg))
+        .catch(err => console.warn('Error al registrar el Service Worker', err));
+    });
+  }
+</script>
 
     <!-- TUS SCRIPTS MODULARES -->
-    <script src="js/variables.js"></script>
-    <script src="js/audio.js"></script>
-    <script src="js/charter.js"></script>
-    <script src="js/ImportChart.js"></script>
-    <script src="js/menu.js"></script>
+    <script src="js/membresia.js?v=082fix"></script>
+    <script src="js/SisMiembros.js?v=082fix"></script>
+    <script src="js/variables.js?v=082fix"></script>
+    <script src="js/audio.js?v=082fix"></script>
+    <script src="js/charter.js?v=082fix"></script>
+    <script src="js/ImportChart.js?v=082fix"></script>
+    <script src="js/archivador.js?v=082fix"></script>
+    <script src="js/StageEditor.js?v=082fix"></script>
+    <script src="js/menu.js?v=082fix"></script>
 </body>
 </html>
