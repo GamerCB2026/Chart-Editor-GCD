@@ -1,0 +1,100 @@
+/* =====================================================================
+   SquareUI — Look profesional de bordes cuadrados (tipo V-Slice).
+   Override que se carga AL FINAL: no toca ningún color ni la fuente
+   original (Freeplay + iconos FontAwesome intactos). Solo geometría
+   (esquinas cuadradas) y pulido flat.
+   Para volver al estilo anterior: quita el <link> de este archivo
+   en index.html. Nada más cambia.
+   ===================================================================== */
+
+/* ---------- 1. Esquinas cuadradas en TODO ---------- */
+*, *::before, *::after {
+    border-radius: 0 !important;
+}
+
+/* ---------- 2. Barra de menú superior: pestañas cuadradas ---------- */
+.top-menu-bar { border-bottom: 1px solid #332f42; }
+.top-menu-btn {
+    border: 1px solid transparent;
+    text-transform: capitalize;
+    font-weight: 700;
+}
+.top-menu-btn:hover { border-color: #5a4c69; }
+.top-menu-btn.active-tab { border-color: #d6244e; }
+
+/* ---------- 3. Ventanas flotantes: barra de título plana ---------- */
+.floating-window-header {
+    background: #110f1a;
+    border-bottom: 1px solid #332f42;
+}
+.floating-window-minimize, .floating-window-close { border: 1px solid transparent; }
+.floating-window-minimize:hover { border-color: #435b80; }
+.floating-window-close:hover { border-color: #d6244e; }
+
+/* ---------- 4. Botones planos sin sombras internas ---------- */
+.left-play-btn,
+.sustain-btn {
+    box-shadow: none;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.left-play-btn:hover,
+.sustain-btn:hover { filter: brightness(1.12); }
+.btn-recortar { border-color: #637da3; }
+.btn-extender { border-color: #7f63a3; }
+
+/* ---------- 5. Sliders cuadrados (thumb rectangular) ---------- */
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 8px;
+    background: #110f1a;
+    border: 1px solid #332f42;
+    outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 18px;
+    background: #d6244e;
+    border: 1px solid #ff9db5;
+    cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+    width: 12px;
+    height: 18px;
+    background: #d6244e;
+    border: 1px solid #ff9db5;
+    border-radius: 0;
+    cursor: pointer;
+}
+
+/* ---------- 6. Scrollbars cuadrados ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: #110f1a; }
+::-webkit-scrollbar-thumb {
+    background: #332f42;
+    border: 1px solid #5a4c69;
+}
+::-webkit-scrollbar-thumb:hover { background: #4a4258; }
+::-webkit-scrollbar-corner { background: #110f1a; }
+
+/* ---------- 7. Checkbox cuadrado con acento original ---------- */
+input[type="checkbox"] { accent-color: #d6244e; }
+
+/* ---------- 8. Menú principal: tarjetas cuadradas con hover de borde ---------- */
+.folder-card { box-shadow: none; }
+.folder-card:hover {
+    transform: none;
+    border-color: var(--bg-workspace);
+    box-shadow: inset 0 0 0 1px var(--bg-workspace);
+}
+.delete-project-btn { border-radius: 0; }
+
+/* ---------- 9. Foco visible estilo editor ---------- */
+:focus-visible {
+    outline: 1px solid #ffdf00;
+    outline-offset: 1px;
+}

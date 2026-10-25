@@ -1,0 +1,50 @@
+/* V0.8.2 Ronda 4 — EXTRAS > Charteo Rápido */
+.charteo-rapido-bar { display: none; }
+.cr-arrow { border: none; padding: 0; margin: 0; background-color: transparent; background-size: contain; background-repeat: no-repeat; background-position: center; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: transform 0.08s ease, filter 0.08s ease; filter: brightness(0.85); }
+.cr-arrow:active, .cr-arrow.cr-pressed { transform: scale(0.86); filter: brightness(1.35); }
+
+/* ---- Horizontal táctil: sin paneles, flechas abajo de cada lado ---- */
+body.cr-touch .control-panel-left,
+body.cr-touch .control-panel-right,
+body.cr-touch .panel-right-tab,
+body.cr-touch .mobile-sustain-bar { display: none !important; }
+body.cr-touch .workspace-body { grid-template-columns: 1fr !important; }
+body.cr-touch .charteo-rapido-bar { display: block; position: fixed; left: 0; right: 0; bottom: 30px; height: 118px; z-index: 300; pointer-events: none; }
+body.cr-touch .cr-horizontal { position: relative; width: 100%; height: 100%; }
+body.cr-touch .cr-grupo { position: absolute; top: 4px; display: flex; justify-content: space-around; pointer-events: auto; background: rgba(10, 8, 15, 0.55); border-radius: 10px; padding: 4px 0; }
+body.cr-touch .cr-grupo .cr-arrow { width: var(--cr-size, 44px); height: var(--cr-size, 44px); }
+body.cr-touch .cr-play { position: absolute; left: 50%; bottom: 2px; transform: translateX(-50%); pointer-events: auto; width: 52px; height: 40px; border-radius: 20px; border: 2px solid #ff5b84; background: #d6244e; color: #fff; font-size: 16px; cursor: pointer; touch-action: manipulation; }
+body.cr-touch .cr-play.playing { background: #435b80; border-color: #637da3; }
+body.cr-touch .cr-vertical { display: none; }
+
+/* ---- Vertical: reemplaza Recortar/Extender ---- */
+body.cr-vertical .mobile-sustain-bar { display: none !important; }
+body.cr-vertical .charteo-rapido-bar { display: flex; flex-direction: column; flex-shrink: 0; gap: 6px; padding: 6px 10px 8px; background: #161421; border-top: 1px solid #231f33; z-index: 110; }
+body.cr-vertical .cr-horizontal { display: none; }
+body.cr-vertical .cr-fila { display: flex; justify-content: space-around; gap: 6px; }
+body.cr-vertical .cr-fila .cr-arrow { width: 58px; height: 58px; }
+body.cr-vertical .cr-selector { display: flex; gap: 6px; }
+body.cr-vertical .cr-selector button { flex: 1; min-height: 34px; border-radius: 8px; border: 2px solid #332f42; background: #252233; color: #ccc; font-weight: 800; font-size: 12px; text-transform: uppercase; cursor: pointer; touch-action: manipulation; }
+body.cr-vertical .cr-selector button[data-lado="oponente"].active { background: #5a1f33; border-color: #ff5b84; color: #fff; }
+body.cr-vertical .cr-selector button[data-lado="player"].active { background: #1f2c5a; border-color: #5b84ff; color: #fff; }
+
+/* V0.8.2 Ronda 5 — Seleccionador de distancia: flecha de inicio */
+.grid-cell.rango-inicio { box-shadow: inset 0 0 0 3px #5de7ff !important; background-color: rgba(93, 231, 255, 0.25) !important; z-index: 11; }
+.rango-select-indicator { border-color: #5de7ff; color: #5de7ff; background: rgba(93, 231, 255, 0.12); }
+.rango-select-indicator:hover { background: #5de7ff; color: #110f1a; }
+
+/* V0.8.2 Ronda 5b — menús superiores: la caja se ajusta a todos los ítems
+   y en pantallas bajas se limita a la altura visible con scroll interno. */
+.menu-item-wrapper .dropdown-menu { height: auto !important; min-height: 0 !important; max-height: calc(100vh - var(--gcd-dd-top, 44px) - 8px) !important; overflow-y: auto !important; overflow-x: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+@supports (height: 100dvh) { .menu-item-wrapper .dropdown-menu { max-height: calc(100dvh - var(--gcd-dd-top, 44px) - 8px) !important; } }
+.menu-item-wrapper .dropdown-menu > * { flex-shrink: 0; }
+/* Solo se resalta la pestaña del menú abierto; AUDIO conserva su estado al cerrar. */
+body:has(.menu-item-wrapper.open) .top-menu-btn.audio-tab-btn.active-tab { background: transparent !important; color: #a4a1b5 !important; border-color: transparent !important; font-weight: 500; }
+.menu-item-wrapper.open > .top-menu-btn { background-color: #d6244e !important; color: #fff !important; border-color: #d6244e !important; }
+
+/* V0.8.2 Ronda 6 — botón Pantalla completa */
+.fullscreen-btn-gcd { display: inline-flex; align-items: center; gap: 8px; min-width: 120px; justify-content: center; border-color: #5de7ff; }
+.fullscreen-btn-gcd:hover { filter: brightness(1.15); }
+.fullscreen-btn-gcd.active-theme { background-color: #d6244e; border-color: #d6244e; color: #fff; }
+html[data-theme="light"] .fullscreen-btn-gcd { background-color: #ffffff !important; color: #1f1f1f !important; border-color: #1f8fb0 !important; }
+html[data-theme="light"] .fullscreen-btn-gcd.active-theme { background-color: #d6244e !important; color: #fff !important; border-color: #d6244e !important; }

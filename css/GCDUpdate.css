@@ -1,0 +1,88 @@
+/* =====================================================================
+   V0.8.2 "Event Update" — ajustes finales (ventanas, paneles, ajustes)
+   ===================================================================== */
+
+/* --- Ventanas flotantes: el contenido llena la ventana al redimensionar --- */
+.floating-editor-window.active { display: flex; flex-direction: column; }
+.floating-editor-window > .floating-window-header { flex: 0 0 auto; }
+.floating-editor-window.active > .floating-window-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none !important;
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+.floating-editor-window.active > .floating-window-body > * { flex-shrink: 0; }
+/* Minimizar gana a la altura que deja el redimensionado (style inline) */
+.floating-editor-window.minimized { height: 38px !important; min-height: 0 !important; resize: none !important; }
+.floating-editor-window.minimized > .floating-window-body { display: none !important; }
+
+/* --- Menú: opción "Próximamente" --- */
+.dropdown-item.dropdown-proximamente { opacity: 0.55; cursor: not-allowed; pointer-events: none; font-style: italic; }
+.dropdown-item.dropdown-proximamente .dropdown-test-tag { margin-left: 6px; }
+
+/* --- Dificultad: Descargar Chart / Descargar Metadata --- */
+.difficulty-actions.difficulty-download-actions .difficulty-action-button { border-color: #5de7ff; color: #bff6ff; }
+.difficulty-actions.difficulty-download-actions .difficulty-action-button:hover { background: #24384a; }
+
+/* --- Paneles laterales: ocultar AUDIO (izquierdo) y el derecho --- */
+.top-menu-btn.audio-tab-btn:not(.active-tab) { background: transparent; color: #a4a1b5; font-weight: 500; }
+body.gcd-left-hidden .control-panel-left,
+body.gcd-right-hidden .control-panel-right {
+    visibility: hidden; overflow: hidden !important; padding: 0 !important; border: 0 !important; min-width: 0; width: 0;
+}
+body.gcd-left-hidden:not(.gcd-right-hidden) .workspace-body { grid-template-columns: 0 1fr 180px; }
+body.gcd-right-hidden:not(.gcd-left-hidden) .workspace-body { grid-template-columns: 260px 1fr 0; }
+body.gcd-left-hidden.gcd-right-hidden .workspace-body { grid-template-columns: 0 1fr 0; }
+@media (orientation: landscape) {
+    body.gcd-left-hidden:not(.gcd-right-hidden) .workspace-body { grid-template-columns: 0 1fr 145px; }
+    body.gcd-right-hidden:not(.gcd-left-hidden) .workspace-body { grid-template-columns: 210px 1fr 0; }
+}
+.control-panel-right { position: relative; }
+.panel-right-close {
+    position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border: 0; border-radius: 4px;
+    background: transparent; color: #aaa3b7; cursor: pointer; z-index: 2; font-size: 12px;
+}
+.panel-right-close:hover { background: #d6244e; color: #fff; }
+.panel-right-tab {
+    display: none; position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+    width: 18px; height: 56px; border: 1px solid var(--border-editor-panel, #332f42); border-right: 0;
+    border-radius: 8px 0 0 8px; background: var(--bg-editor-panel, #191722); color: #ff91f1; cursor: pointer;
+    z-index: 40; padding: 0; font-size: 11px; box-shadow: -4px 0 12px rgba(0, 0, 0, 0.35);
+}
+.panel-right-tab:hover { background: #231f33; color: #fff; }
+body.gcd-right-hidden .panel-right-tab { display: block; }
+@media (orientation: portrait) {
+    body.portrait-allowed .panel-right-tab, body.portrait-allowed .panel-right-close { display: none !important; }
+}
+
+/* --- Visualizar personajes: Ajustes --- */
+.char-settings {
+    position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; gap: 8px;
+    padding: 10px; overflow: auto; background: rgba(20, 18, 28, 0.97); color: #e9e6f2; font-size: 11px;
+}
+.char-settings[hidden] { display: none; }
+.char-settings-head { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 12px; color: #fff; }
+.char-settings-back { border: 1px solid #5a4c69; background: #252131; color: #fff; border-radius: 5px; padding: 3px 8px; cursor: pointer; font-size: 11px; }
+.char-settings-back:hover { background: #435b80; }
+.char-settings-sec { border-top: 1px solid #332f42; padding-top: 7px; display: flex; flex-direction: column; gap: 6px; }
+.char-settings-sec h4 { margin: 0; font-size: 10px; letter-spacing: 1.2px; color: #ff5b84; font-weight: 800; }
+.char-settings-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.char-settings input[type="text"] { flex: 1 1 120px; min-width: 0; background: #211e2d; color: #fff; border: 1px solid #5a4c69; border-radius: 4px; padding: 4px 6px; font-size: 11px; }
+.char-settings-btn { border: 1px solid #fff; background: #211e2d; color: #fff; border-radius: 5px; padding: 4px 8px; cursor: pointer; font-size: 10px; }
+.char-settings-btn:hover { background: #d6244e; }
+.char-settings-btn:disabled { opacity: 0.45; cursor: not-allowed; background: #211e2d; }
+.char-settings-toggle { display: flex; align-items: flex-start; gap: 7px; cursor: pointer; line-height: 1.3; }
+.char-settings-toggle input { margin-top: 1px; accent-color: #d6244e; }
+.char-settings-hint { color: #a9a4b8; font-size: 10px; line-height: 1.35; }
+.char-saved-list { display: flex; flex-direction: column; gap: 4px; }
+.char-saved-item { display: flex; align-items: center; gap: 6px; background: #211e2d; border-radius: 4px; padding: 3px 6px; }
+.char-saved-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.char-settings-btn-mini { border: 0; background: transparent; color: #aaa3b7; cursor: pointer; padding: 2px 4px; font-size: 11px; }
+.char-settings-btn-mini:hover { color: #fff; }
+.dropdown-proximamente .dropdown-label { white-space: nowrap; }
+/* V0.8.2n-2: icono del Archivador (Icons/AudioGuard.PNG) */
+.audioguard-icon { width: 16px; height: 16px; object-fit: contain; margin-right: 6px; vertical-align: -3px; image-rendering: auto; }
+.folder-icon .audioguard-card { width: 64px; height: 64px; margin: 0; vertical-align: middle; }
+.char-saved-load { flex: 1; min-width: 0; text-align: left; border: 0; background: transparent; color: #fff; cursor: pointer; padding: 2px 0; font: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.char-saved-load:hover { color: #5de7ff; text-decoration: underline; }

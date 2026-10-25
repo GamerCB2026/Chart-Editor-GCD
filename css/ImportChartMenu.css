@@ -18,6 +18,9 @@
 .import-chart-close { width: 32px; height: 32px; border: 1px solid #40384e; border-radius: 6px; background: #252131; color: #c9c2d5; cursor: pointer; }
 .import-chart-close:hover { color: #fff; border-color: #ff5b84; }
 .import-chart-options { display: grid; gap: 12px; }
+/* V0.8.2: separadores de grupo del Import Center (port de GCD Plus, con colores GCD) */
+.import-chart-group { margin-top: 6px; color: #a4a1b5; font-size: 10px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; }
+.import-chart-options .import-chart-group:first-child { margin-top: 0; }
 .import-chart-option { display: flex; align-items: center; gap: 14px; width: 100%; padding: 16px; border: 1px solid #393245; border-radius: 8px; background: #211e2d; color: #fff; text-align: left; cursor: pointer; transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease; }
 .import-chart-option:hover { transform: translateX(4px); background: #292438; border-color: #ff5b84; }
 .import-chart-option.json:hover { border-color: #5b84ff; }
