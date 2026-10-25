@@ -261,6 +261,8 @@ function toggleMenuArchivos(event) {
     const archivos = document.getElementById("menu-archivos-wrapper");
     const windows = document.getElementById("menu-windows-wrapper");
     if (windows) windows.classList.remove("open");
+    document.getElementById("menu-editor-wrapper")?.classList.remove("open");
+    document.getElementById("menu-extras-wrapper")?.classList.remove("open");
     if (archivos) archivos.classList.toggle("open");
     if (typeof actualizarMenuArchivar === "function") actualizarMenuArchivar();
 }
@@ -269,7 +271,10 @@ function toggleMenuWindows(event) {
     const archivos = document.getElementById("menu-archivos-wrapper");
     const windows = document.getElementById("menu-windows-wrapper");
     if (archivos) archivos.classList.remove("open");
+    document.getElementById("menu-editor-wrapper")?.classList.remove("open");
+    document.getElementById("menu-extras-wrapper")?.classList.remove("open");
     if (windows) windows.classList.toggle("open");
+    if (typeof actualizarMenuVisualizarPersonajes === "function") actualizarMenuVisualizarPersonajes();
 }
 // Cierra solo si el click/tap queda fuera de los wrappers (evita race táctil
 // donde el click sintético cerraba el menú justo tras abrirlo).
@@ -355,7 +360,8 @@ function actualizarMetadataEnInterfaz() {
         "metadata-charter": currentChartData.charter || "",
         "metadata-bpm": currentChartData.bpm || 160,
         "metadata-album": currentChartData.album || "volume1",
-        "metadata-difficulty": currentChartData.difficulty || 3,
+        "metadata-stickers": currentChartData.stickerPack || "",
+        "metadata-difficulty": obtenerRatingDificultadGCD(currentChartData, dificultadActiva),
         "metadata-player": currentChartData.player || "bf",
         "metadata-girlfriend": currentChartData.girlfriend || "gf",
         "metadata-opponent": currentChartData.opponent || "dad",
@@ -365,6 +371,22 @@ function actualizarMetadataEnInterfaz() {
         const campo = document.getElementById(id);
         if (campo) campo.value = valor;
     });
+    const nombreDif = (typeof dificultadActiva === "string" && dificultadActiva) || "normal";
+    const etiqueta = document.getElementById("metadata-difficulty-label");
+    if (etiqueta) etiqueta.textContent = `Dificultad «${nombreDif}» (1-15)`;
+    const estado = document.getElementById("metadata-variation-status");
+    if (estado) {
+        const v = typeof variacionActivaGCD === "function" ? variacionActivaGCD() : "default";
+        estado.textContent = v === "default" ? "DEFAULT" : String(v).toUpperCase();
+    }
+}
+
+// V0.8.2n: rating (1-15) por dificultad → playData.ratings de V-Slice.
+function obtenerRatingDificultadGCD(datos, dificultad) {
+    const r = datos && datos.ratings && typeof datos.ratings === "object" ? Number(datos.ratings[dificultad]) : NaN;
+    if (Number.isFinite(r) && r > 0) return Math.min(15, Math.max(1, Math.round(r)));
+    const d = parseInt(datos && datos.difficulty, 10);
+    return Number.isFinite(d) && d > 0 ? Math.min(15, Math.max(1, d)) : 3;
 }
 
 function actualizarMetadataDesdeInterfaz() {
@@ -378,11 +400,17 @@ function actualizarMetadataDesdeInterfaz() {
     const bpmAnterior = currentChartData.bpm;
     if (Number.isFinite(bpm) && bpm >= 20 && bpm <= 400) currentChartData.bpm = bpm;
     currentChartData.album = leerTexto("metadata-album");
-    if (Number.isInteger(dificultad)) currentChartData.difficulty = Math.min(15, Math.max(1, dificultad));
+    if (Number.isInteger(dificultad)) {
+        const nombreDif = (typeof dificultadActiva === "string" && dificultadActiva) || "normal";
+        if (!currentChartData.ratings || typeof currentChartData.ratings !== "object") currentChartData.ratings = {};
+        currentChartData.ratings[nombreDif] = Math.min(15, Math.max(1, dificultad));
+    }
+    currentChartData.stickerPack = leerTexto("metadata-stickers");
     currentChartData.player = leerTexto("metadata-player") || "bf";
     currentChartData.girlfriend = leerTexto("metadata-girlfriend") || "gf";
     currentChartData.opponent = leerTexto("metadata-opponent") || "dad";
     currentChartData.stage = leerTexto("metadata-stage") || "stage";
+    if (typeof actualizarPanelPersonajes === "function") actualizarPanelPersonajes();
     document.getElementById("song-name").value = currentChartData.songName;
     document.getElementById("song-bpm").value = currentChartData.bpm;
     document.getElementById("song-author").value = currentChartData.author;
@@ -580,71 +608,101 @@ function convertirNotasVSlice(notas, stepDuration) {
     return Object.entries(notas || {}).map(([key, nota]) => {
         const [row, col] = key.split("-").map((valor) => parseInt(valor, 10));
         if (!Number.isInteger(row) || !Number.isInteger(col)) return null;
-        return {
-            "t": row * stepDuration * 1000,
+        // V0.8.2k Modo Libre: "off" (fracción de casilla) solo cambia el tiempo; no se exporta.
+        const off = Number(nota?.off) || 0;
+        const salida = {
+            "t": off ? Math.round((row + off) * stepDuration * 1000 * 1000) / 1000 : row * stepDuration * 1000,
             "d": col,
-            "l": (parseInt(nota?.len, 10) || 0) * stepDuration * 1000,
-            "p": []
+            "l": (parseInt(nota?.len, 10) || 0) * stepDuration * 1000
         };
+        // V0.8.2 Note Events: kind ("k") y params ("p") como en V-Slice.
+        const kind = nota && nota.kind !== undefined && nota.kind !== null ? String(nota.kind).trim() : "";
+        if (kind && kind.toLowerCase() !== "normal") {
+            salida.k = kind;
+            salida.p = Array.isArray(nota.params)
+                ? nota.params.filter((p) => p && typeof p.name === "string").map((p) => ({ "n": p.name, "v": p.value })) // NoteParamData de V-Slice: @:alias("n") / @:alias("v")
+                : [];
+        } else {
+            salida.p = [];
+        }
+        return salida;
     }).filter(Boolean).sort((a, b) => a.t - b.t);
 }
 
 function convertirEventosVSlice(eventos, stepDuration) {
-    return Object.entries(eventos || {}).map(([row, evento]) => {
+    // V0.8.2k: eventos pegados ("fila~1"...) salen por separado con la misma "t", en su orden.
+    const pila = (k) => (typeof indicePilaClaveEvento === "function" ? indicePilaClaveEvento(k) : 0);
+    const entradas = Object.entries(eventos || {}).sort((a, b) => (parseInt(a[0], 10) - parseInt(b[0], 10)) || (pila(a[0]) - pila(b[0])));
+    return entradas.map(([row, evento]) => {
         const fila = parseInt(row, 10);
         if (!Number.isInteger(fila) || !evento) return null;
-        // V-Slice: 0=opponent, 1=player, 2=gf (mismo orden que convertirEventosExternos)
-        // target "position" no tiene char de personaje; se omite char y se usan x/y
-        const targetToChar = { opponent: 1, player: 0, gf: 2 };
+        // V0.8.2 Event Update: los demás tipos se exportan con su id V-Slice y su "v".
+        if (typeof exportarEventoVSliceGCD === "function") {
+            const otro = exportarEventoVSliceGCD(evento, fila * stepDuration * 1000);
+            if (otro) return otro;
+        }
+        // V-Slice (FocusCameraSongEvent): char -1=Position, 0=player, 1=opponent, 2=gf
+        // V0.8.2m: se escriben la duración y el ease reales (antes siempre 4 / CLASSIC)
+        // y Position sale con char -1 como en el juego (antes no llevaba char).
+        const targetToChar = { opponent: 1, player: 0, gf: 2, position: -1 };
+        const dur = Number(evento.duration);
         const valores = {
             "x": Number(evento.offsetX) || 0,
-            "duration": 4,
+            "duration": Number.isFinite(dur) ? Math.max(0, dur) : 4,
             "y": Number(evento.offsetY) || 0,
-            "ease": "CLASSIC"
+            "ease": evento.effect === undefined || evento.effect === null || evento.effect === "" ? "CLASSIC" : String(evento.effect)
         };
-        if (evento.target === "position") {
-            // Cámara a coordenadas: sin char de personaje (offsets ya van en x/y)
-        } else {
-            valores.char = Object.prototype.hasOwnProperty.call(targetToChar, evento.target)
-                ? targetToChar[evento.target]
-                : 0;
+        valores.char = Object.prototype.hasOwnProperty.call(targetToChar, evento.target)
+            ? targetToChar[evento.target]
+            : 0;
+        // Claves extra que traía el chart (easeDir, etc.).
+        if (evento.extraV && typeof evento.extraV === "object") {
+            Object.keys(evento.extraV).forEach((k) => {
+                if (!Object.prototype.hasOwnProperty.call(valores, k)) valores[k] = JSON.parse(JSON.stringify(evento.extraV[k]));
+            });
         }
         return {
             "t": fila * stepDuration * 1000,
             "e": "FocusCamera",
             "v": valores
         };
-    }).filter(Boolean).sort((a, b) => a.t - b.t);
+    }).filter(Boolean); // ya van ordenados por fila y por posición en la casilla
 }
 
-function menuGuardarChartTo() {
-    const chartActual = sincronizarChartDesdeInterfaz();
-    guardarDificultadActiva();
-    const inputSongName = chartActual?.songName || "Bopeebo";
-    const inputBPM = chartActual?.bpm || 100;
-    const inputArtist = chartActual?.author || "Kawai Sprite";
-    const inputCharter = chartActual?.charter || "Deiby";
-    const inputSpeed = chartActual?.speed || 1;
-    const inputAlbum = chartActual?.album || "volume1";
-    const inputDifficulty = Math.min(15, Math.max(1, parseInt(chartActual?.difficulty, 10) || 3));
-    const inputPlayer = chartActual?.player || "bf";
-    const inputGirlfriend = chartActual?.girlfriend || "gf";
-    const inputOpponent = chartActual?.opponent || "dad";
-    const inputStage = chartActual?.stage || "stage";
+// V0.8.2j: arma song-metadata / song-chart de V-Slice para una carpeta (Default o variación).
+// "bf-erect" en la variación erect → "bf" (el sufijo solo va en el nombre del .ogg).
+function vozBaseGCD(id, variacion) {
+    const v = String(id || "");
+    const suf = variacion && variacion !== "default" ? "-" + String(variacion).toLowerCase() : "";
+    return suf && v.toLowerCase().endsWith(suf) && v.length > suf.length ? v.slice(0, -suf.length) : v;
+}
 
-    const notasActivas = chartActual?.notes || {};
+function construirJsonVSliceGCD(datos, opciones = {}) {
+    const esDefault = !opciones.variacion || opciones.variacion === "default";
+    const inputSongName = datos?.songName || "Bopeebo";
+    const inputBPM = datos?.bpm || 100;
+    const inputArtist = datos?.author || "Kawai Sprite";
+    const inputCharter = datos?.charter || "Deiby";
+    const inputSpeed = datos?.speed || 1;
+    const inputAlbum = datos?.album || "volume1";
+    const inputStickers = String(datos?.stickerPack || "").trim();
+    const inputPlayer = datos?.player || "bf";
+    const inputGirlfriend = datos?.girlfriend || "gf";
+    const inputOpponent = datos?.opponent || "dad";
+    const inputStage = datos?.stage || "stage";
+
+    const notasActivas = datos?.notes || {};
 
     // Orden canónico de dificultades
     const ORDEN_DIFICULTADES = ["easy", "normal", "hard"];
 
-    // Construir el pool de dificultades REALES: solo las que existen y NO están vacías
-    const dificultadesRaw = chartActual?.difficulties
-        ? { ...chartActual.difficulties }
-        : { normal: { notes: notasActivas, events: chartActual?.events || {} } };
+    const dificultadesRaw = datos?.difficulties
+        ? { ...datos.difficulties }
+        : { normal: { notes: notasActivas, events: datos?.events || {} } };
 
     // Asegurar que la dificultad activa esté representada también (por si acaso)
-    if (chartActual?.activeDifficulty && !dificultadesRaw[chartActual.activeDifficulty]) {
-        dificultadesRaw[chartActual.activeDifficulty] = { notes: chartActual.notes || {}, events: chartActual.events || {} };
+    if (datos?.activeDifficulty && !dificultadesRaw[datos.activeDifficulty]) {
+        dificultadesRaw[datos.activeDifficulty] = { notes: datos.notes || {}, events: datos.events || {} };
     }
 
     function dificultadTieneContenido(diff) {
@@ -654,33 +712,34 @@ function menuGuardarChartTo() {
         return tieneNotes || tieneEvents;
     }
 
-    // Construir lista final en orden easy → normal → hard; añadir al final otras dif. custom
+    // Default: easy → normal → hard (solo con contenido) y luego las añadidas (siempre).
+    // Variación: todas sus dificultades, en su orden.
     const ordenadas = [];
-    ORDEN_DIFICULTADES.forEach((nombre) => {
-        if (dificultadesRaw[nombre] && dificultadTieneContenido(dificultadesRaw[nombre])) {
-            ordenadas.push(nombre);
-        }
-    });
-    Object.keys(dificultadesRaw).forEach((nombre) => {
-        if (ORDEN_DIFICULTADES.indexOf(nombre) === -1 && dificultadTieneContenido(dificultadesRaw[nombre])) {
-            ordenadas.push(nombre);
-        }
-    });
+    if (esDefault) {
+        ORDEN_DIFICULTADES.forEach((nombre) => {
+            if (dificultadesRaw[nombre] && dificultadTieneContenido(dificultadesRaw[nombre])) ordenadas.push(nombre);
+        });
+        Object.keys(dificultadesRaw).forEach((nombre) => {
+            if (ORDEN_DIFICULTADES.indexOf(nombre) === -1) ordenadas.push(nombre);
+        });
+    } else {
+        Object.keys(dificultadesRaw).forEach((nombre) => ordenadas.push(nombre));
+    }
 
     // Por si acaso no hay NINGUNA, forzamos normal con lo activo
     if (ordenadas.length === 0) {
         ordenadas.push("normal");
-        dificultadesRaw.normal = { notes: notasActivas, events: chartActual?.events || {} };
+        dificultadesRaw.normal = { notes: notasActivas, events: datos?.events || {} };
     }
 
-    const zip = new JSZip();
-    const songNameId = inputSongName.toLowerCase().replace(/[^a-z0-9_-]+/g, "-");
-
-    // 1. CONSTRUCCIÓN DE SONG-METADATA.JSON
+    const velocidades = datos?.scrollSpeeds || {};
     const ratingsEntries = {};
-    ordenadas.forEach((nombre) => { ratingsEntries[nombre] = inputDifficulty; });
+    ordenadas.forEach((nombre) => { ratingsEntries[nombre] = obtenerRatingDificultadGCD(datos, nombre); });
     const scrollSpeedEntries = {};
-    ordenadas.forEach((nombre) => { scrollSpeedEntries[nombre] = inputSpeed; });
+    ordenadas.forEach((nombre) => {
+        const v = nombre === datos?.activeDifficulty ? inputSpeed : parseFloat(velocidades[nombre]);
+        scrollSpeedEntries[nombre] = Number.isFinite(v) && v > 0 ? v : inputSpeed;
+    });
 
     const metadataData = {
         "version": "2.2.4",
@@ -696,19 +755,19 @@ function menuGuardarChartTo() {
             "altVocals": {}
         },
         "playData": {
-            "songVariations": [],
+            "songVariations": esDefault ? (opciones.songVariations || []).slice() : [],
             "difficulties": ordenadas.slice(),
             "characters": {
                 "player": inputPlayer,
                 "girlfriend": inputGirlfriend,
                 "opponent": inputOpponent,
-                "instrumental": "",
+                "instrumental": opciones.instrumental || "",
                 "altInstrumentals": [],
-                "opponentVocals": ["Opponent"],
-                "playerVocals": ["Player"]
+                // Siempre el id base (sin "-<variación>"), como en V-Slice oficial.
+                "opponentVocals": [vozBaseGCD(inputOpponent, opciones.variacion)],
+                "playerVocals": [vozBaseGCD(inputPlayer, opciones.variacion)]
             },
             "stage": inputStage,
-            "stickerPack": "funkin",
             "album": inputAlbum,
             "noteStyle": "funkin",
             "ratings": ratingsEntries,
@@ -721,18 +780,24 @@ function menuGuardarChartTo() {
             { "t": 0, "b": 0, "bpm": inputBPM, "n": 4, "d": 4 }
         ]
     };
+    // stickerPack es opcional en V-Slice: vacío = stickers del personaje.
+    if (inputStickers) {
+        const pd = metadataData.playData, orden = {};
+        Object.keys(pd).forEach((k) => { if (k === "album") orden.stickerPack = inputStickers; orden[k] = pd[k]; });
+        metadataData.playData = orden;
+    }
+    if (!esDefault) metadataData.variation = opciones.variacion;
 
-    // 2. CONSTRUCCIÓN DE SONG-CHART.JSON
-    // - notes: por dificultad (easy / normal / hard).
+    // - notes: por dificultad.
     // - events: UN SOLO ARRAY GLOBAL a nivel raíz (eventos compartidos en el editor).
     const stepDuration = (60 / inputBPM) / 4;
     const vSliceNotes = {};
     ordenadas.forEach((nombre) => {
         const diff = dificultadesRaw[nombre] || { notes: {}, events: {} };
-        vSliceNotes[nombre] = convertirNotasVSlice(diff.notes, stepDuration);
+        const notas = nombre === datos?.activeDifficulty && datos?.notes ? datos.notes : diff.notes;
+        vSliceNotes[nombre] = convertirNotasVSlice(notas, stepDuration);
     });
-    // Leer events una sola vez desde la referencia compartida (chart.events)
-    const eventosCompartidos = chartActual?.events
+    const eventosCompartidos = datos?.events
         || (ordenadas[0] && dificultadesRaw[ordenadas[0]]?.events)
         || {};
     const vSliceEvents = convertirEventosVSlice(eventosCompartidos, stepDuration);
@@ -744,35 +809,107 @@ function menuGuardarChartTo() {
         "notes": vSliceNotes,
         "generatedBy": "Chart Editor GCD"
     };
+    return { metadataData, chartData, ordenadas };
+}
 
-    // Agregar JSONs al ZIP
-    zip.file(`${songNameId}-metadata.json`, JSON.stringify(metadataData, null, 2));
-    zip.file(`${songNameId}-chart.json`, JSON.stringify(chartData, null, 2));
+// V0.8.2n: id de canción (nombre de archivo). El .fnfc usa el songName de la variación DEFAULT.
+function idCancionGCD(nombre) {
+    return String(nombre || "Bopeebo").toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "song";
+}
+function idArchivoAudioGCD(texto) {
+    return String(texto || "").trim().replace(/[\\/:*?"<>|\s]+/g, "-");
+}
+function esArchivoAudioGCD(f) { return f instanceof Blob && f.size > 0; }
 
-    // 3. EMPAQUETADO DE LOS ARCHIVOS OGG SELECCIONADOS EN EL PASO 2
-    const audioFiles = [
-        ["inst.ogg", fileRawInst],
-        ["Voices-Player.ogg", fileRawV1],
-        ["Voices-Opponent.ogg", fileRawV2]
-    ];
-    audioFiles.forEach(([fileName, audioFile]) => {
-        if (audioFile instanceof Blob && audioFile.size > 0) zip.file(fileName, audioFile);
+// Prepara todo lo que va dentro del .fnfc (mismos nombres que usa V-Slice):
+//   <id>-metadata.json / <id>-chart.json (+ -<var>), Inst.ogg, Voices-<player>.ogg,
+//   Voices-<opponent>.ogg, Inst-<var>.ogg, Voices-<player>-<var>.ogg, Voices-<opponent>-<var>.ogg.
+function construirContenidoFNFCGCD() {
+    const chartActual = sincronizarChartDesdeInterfaz();
+    if (typeof guardarVelocidadDificultad === "function") guardarVelocidadDificultad();
+    guardarDificultadActiva();
+    const tieneVar = typeof listaVariacionesGCD === "function";
+    const variaciones = tieneVar ? listaVariacionesGCD().filter((id) => id !== "default") : [];
+    const datosDefault = typeof datosVariacionGCD === "function" ? (datosVariacionGCD("default") || chartActual) : chartActual;
+    const audiosDefault = typeof audiosDeVariacionGCD === "function"
+        ? audiosDeVariacionGCD("default")
+        : { inst: fileRawInst, v1: fileRawV1, v2: fileRawV2 };
+    // V0.8.2n-2: el .fnfc (y sus json / manifest) usan el nombre de la variación DEFAULT.
+    const songNameId = idCancionGCD(datosDefault?.songName || chartActual?.songName);
+    const archivos = []; // [nombre, contenido]
+    const jsons = {};    // var -> { metadata, chart }
+
+    const playerDef = idArchivoAudioGCD(datosDefault?.player || "bf");
+    const opponentDef = idArchivoAudioGCD(datosDefault?.opponent || "dad");
+    const base = construirJsonVSliceGCD(datosDefault, { variacion: "default", songVariations: variaciones });
+    jsons.default = { metadata: base.metadataData, chart: base.chartData };
+    archivos.push([`${songNameId}-metadata.json`, JSON.stringify(base.metadataData, null, 2)]);
+    archivos.push([`${songNameId}-chart.json`, JSON.stringify(base.chartData, null, 2)]);
+    if (esArchivoAudioGCD(audiosDefault.inst)) archivos.push(["Inst.ogg", audiosDefault.inst]);
+    if (esArchivoAudioGCD(audiosDefault.v1)) archivos.push([`Voices-${playerDef}.ogg`, audiosDefault.v1]);
+    if (esArchivoAudioGCD(audiosDefault.v2) && opponentDef !== playerDef) archivos.push([`Voices-${opponentDef}.ogg`, audiosDefault.v2]);
+
+    variaciones.forEach((id) => {
+        const datos = datosVariacionGCD(id);
+        if (!datos) return;
+        const a = audiosDeVariacionGCD(id);
+        const instPropio = esArchivoAudioGCD(a.inst) && a.inst !== audiosDefault.inst;
+        const instId = instPropio ? idArchivoAudioGCD((datos.metaExtra && datos.metaExtra.instrumental) || id) : "";
+        const r = construirJsonVSliceGCD(datos, { variacion: id, instrumental: instId });
+        jsons[id] = { metadata: r.metadataData, chart: r.chartData };
+        archivos.push([`${songNameId}-metadata-${id}.json`, JSON.stringify(r.metadataData, null, 2)]);
+        archivos.push([`${songNameId}-chart-${id}.json`, JSON.stringify(r.chartData, null, 2)]);
+        if (instPropio) archivos.push([`Inst-${instId}.ogg`, a.inst]);
+        // Voces: si es el mismo audio Y el mismo personaje que Default, el juego cae a Voices-<personaje>.ogg.
+        const pj = idArchivoAudioGCD(datos.player || "bf");
+        const op = idArchivoAudioGCD(datos.opponent || "dad");
+        if (esArchivoAudioGCD(a.v1) && (a.v1 !== audiosDefault.v1 || pj !== playerDef)) archivos.push([`Voices-${pj}-${id}.ogg`, a.v1]);
+        if (esArchivoAudioGCD(a.v2) && op !== pj && (a.v2 !== audiosDefault.v2 || op !== opponentDef)) archivos.push([`Voices-${op}-${id}.ogg`, a.v2]);
     });
+    archivos.push(["manifest.json", JSON.stringify({ version: "1.0.0", songId: songNameId }, null, 2)]);
+    return { songNameId, archivos, jsons };
+}
 
-    // 4. DESCARGA DEL ARCHIVO .FNFC COMPLETO
+function descargarBlobGCD(contenido, nombre) {
+    const url = URL.createObjectURL(contenido);
+    const dlElem = document.createElement("a");
+    dlElem.setAttribute("href", url);
+    dlElem.setAttribute("download", nombre);
+    document.body.appendChild(dlElem);
+    dlElem.click();
+    document.body.removeChild(dlElem);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function menuGuardarChartTo() {
+    if (!currentChartData) return;
+    const { songNameId, archivos } = construirContenidoFNFCGCD();
+    const zip = new JSZip();
+    archivos.forEach(([nombre, contenido]) => zip.file(nombre, contenido));
     zip.generateAsync({ type: "blob" }).then(function (content) {
-        const url = URL.createObjectURL(content);
-        const dlElem = document.createElement("a");
-        dlElem.setAttribute("href", url);
-        dlElem.setAttribute("download", `${songNameId}.fnfc`);
-        document.body.appendChild(dlElem);
-        dlElem.click();
-        document.body.removeChild(dlElem);
-        setTimeout(() => URL.revokeObjectURL(url), 100);
+        descargarBlobGCD(content, `${songNameId}.fnfc`);
     }).catch(err => {
         alert("Error al estructurar el chart con audios.");
         console.error(err);
     });
+}
+
+// Ventana Dificultad → Descargar Chart / Descargar Metadata (variación actual,
+// mismo formato y nombre que dentro del .fnfc).
+function descargarJsonVariacionActivaGCD(tipo) {
+    if (!currentChartData) return;
+    try {
+        const { songNameId, jsons } = construirContenidoFNFCGCD();
+        const v = typeof variacionActivaGCD === "function" ? variacionActivaGCD() : "default";
+        const par = jsons[v] || jsons.default;
+        const clave = tipo === "metadata" ? "metadata" : "chart";
+        const nombre = `${songNameId}-${clave}${v !== "default" ? "-" + v : ""}.json`;
+        descargarBlobGCD(new Blob([JSON.stringify(par[clave], null, 2)], { type: "application/json" }), nombre);
+        if (typeof mostrarToastGCD === "function") mostrarToastGCD(`Descargado ${nombre}`);
+    } catch (err) {
+        console.error("[Descargar JSON]", err);
+        alert("No se pudo generar el JSON de la variación actual.");
+    }
 }
 
 function menuExit() { exitEditor(); }
@@ -783,6 +920,8 @@ function exitEditor() {
     cerrarVentanaEvents();
     cerrarVentanaMetadata();
     cerrarVentanaHelp();
+    if (typeof cerrarVisualizarPersonajes === "function") cerrarVisualizarPersonajes();
+    if (typeof cerrarVentanaNoteEvents === "function") cerrarVentanaNoteEvents();
     resetearFormularios(); // <-- Purgamos formularios al salir
     document.getElementById("editor-workspace").classList.remove("active");
     document.getElementById("main-menu").classList.remove("hidden");
@@ -794,7 +933,20 @@ function exitEditor() {
 // ==========================================
 
 function abrirModalReVincularAudios() {
-    resetearFormularios(); // <-- Purgamos para que el modal salga limpio sin audios de canciones pasadas
+    // Solo limpia los selectores de este modal (resetearFormularios cambiaba el nombre de la canción a "Bopeebo").
+    [["file-re-inst", "label-re-inst"], ["file-re-voice1", "label-re-voice1"], ["file-re-voice2", "label-re-voice2"]].forEach(([i, l]) => {
+        const inp = document.getElementById(i), lab = document.getElementById(l);
+        if (inp) inp.value = "";
+        if (lab) lab.innerText = "Ninguno";
+    });
+    const info = document.getElementById("revincular-variacion-info");
+    if (info && currentChartData) {
+        const v = typeof variacionActivaGCD === "function" ? variacionActivaGCD() : "default";
+        const pj = currentChartData.player || "bf", op = currentChartData.opponent || "dad";
+        const suf = v === "default" ? "" : "-" + v;
+        info.innerHTML = `Variación: <b>${v === "default" ? "Default" : v}</b> — los audios se vinculan solo a esta variación ` +
+            `(se exportan como Inst${suf}.ogg, Voices-${pj}${suf}.ogg y Voices-${op}${suf}.ogg).`;
+    }
     document.getElementById("modal-revincular-audio").classList.add("active");
 }
 
@@ -850,6 +1002,16 @@ async function procesarReVinculacionAudios() {
         if (typeof refrescarWaveformsTrasCarga === 'function') refrescarWaveformsTrasCarga();
         else if (typeof actualizarWaveforms === 'function') actualizarWaveforms(0, true);
         
+        // Guardar en el archivador (IndexedDB) si el chart ya está archivado.
+        if (currentChartData && currentChartData.id && typeof chartEstaEnArchivador === "function" && chartEstaEnArchivador() && typeof idbPutAudios === "function") {
+            try {
+                await idbPutAudios(currentChartData.id, { inst: fileRawInst || undefined, v1: fileRawV1 || undefined, v2: fileRawV2 || undefined });
+            } catch (e) { console.warn("No se pudieron guardar los audios re-vinculados", e); }
+        }
+        if (typeof mostrarToastGCD === "function") {
+            const v = typeof variacionActivaGCD === "function" ? variacionActivaGCD() : "default";
+            mostrarToastGCD(`Audios vinculados a ${v === "default" ? "Default" : v}`);
+        }
         cerrarModalReVincularAudios();
         
     } catch (err) {

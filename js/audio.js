@@ -1,5 +1,6 @@
 // TODO LO RELACIONADO CON AUDIO, WAVEFORMS, MUTE Y HITSOUNDS
 // V0.8.1: audio WA intacto (no tocar playback/seek).
+// V0.8.2: sliders de volumen (Inst / Vocales / Hitsound) aplicados solo via gain/volume.
 // Visualizer: mismo reloj Y↔tiempo que flechas (reposicionarScroll / manejarScrollManual).
 // HTML only for tracks without a buffer; HTML voice sync ≤ every 300ms (never every rAF).
 
@@ -18,8 +19,25 @@ let _lastHtmlVoiceSyncMs = 0;
 /** Blob URLs creados por crearElementoAudio — revoke en limpiarAudiosExistentes */
 let _audioBlobUrls = [];
 
-/** GainNodes: mute 0/1 cuando hay playback WA */
+/** GainNodes: (mute ? 0 : volumen) cuando hay playback WA */
 let waGains = { inst: null, v1: null, v2: null };
+
+// V0.8.2: Volumen Música (sliders del panel AUDIO, port de GCD Plus).
+// Solo cambia gain/volume: nunca hace seek ni reinicia fuentes, asi que no afecta la sincronia.
+const VOLUMENES_LS_KEY = 'gcd-volumenes-v082';
+let volumenInst = 0.5; // Instrumental arranca siempre en 50%
+let volumenVocales = 1;
+
+function _clampVol(v, fallback) {
+    const n = parseFloat(v);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.min(1, Math.max(0, n));
+}
+
+/** Volumen (0..1) para una pista: inst -> Instrumental, v1/v2 -> Vocales. */
+function _volParaKey(key) {
+    return key === 'inst' ? volumenInst : volumenVocales;
+}
 
 let _waPlay = {
     playing: false,
@@ -214,7 +232,7 @@ function _startOneWaSource(key, buffer, when, offsetSec) {
     src.playbackRate.value = 1;
     const gain = waGains[key];
     if (gain) {
-        gain.gain.value = _muteGainForKey(key) ? 0 : 1;
+        gain.gain.value = _muteGainForKey(key) ? 0 : _volParaKey(key);
         src.connect(gain);
     } else {
         src.connect(audioCtx.destination);
@@ -241,7 +259,7 @@ function startWaPlayback(offsetSec) {
         // Fallback HTML puro
         sincronizarPistasAudio(t);
         const list = [audioInst, audioVoice1, audioVoice2].filter(Boolean);
-        list.forEach((a) => { try { a.playbackRate = 1; a.volume = 1; } catch (e) { } });
+        list.forEach((a) => { try { a.playbackRate = 1; } catch (e) { } });
         if (typeof aplicarMuteEstadosUI === 'function') aplicarMuteEstadosUI();
         Promise.allSettled(list.map((a) => a.play()));
         _waPlay.playing = false;
@@ -276,7 +294,6 @@ function startWaPlayback(offsetSec) {
     if (!buffers.v2 && audioVoice2) htmlFallbacks.push(audioVoice2);
     htmlFallbacks.forEach((a) => {
         try {
-            a.volume = 1;
             a.playbackRate = 1;
             a.currentTime = t;
         } catch (e) { }
@@ -324,11 +341,11 @@ function seekWaPlayback(t) {
     return time;
 }
 
-/** Volumen 1.0; mute vía GainNode (WA) y/o HTMLAudio.muted. */
+/** playbackRate 1; volumen (sliders) + mute vía GainNode (WA) y/o HTMLAudio en aplicarMuteEstadosUI. */
 function fijarVolumenPistas() {
-    if (audioInst) { audioInst.volume = 1; audioInst.playbackRate = 1; }
-    if (audioVoice1) { audioVoice1.volume = 1; audioVoice1.playbackRate = 1; }
-    if (audioVoice2) { audioVoice2.volume = 1; audioVoice2.playbackRate = 1; }
+    if (audioInst) { audioInst.playbackRate = 1; }
+    if (audioVoice1) { audioVoice1.playbackRate = 1; }
+    if (audioVoice2) { audioVoice2.playbackRate = 1; }
     aplicarMuteEstadosUI();
 }
 
@@ -563,16 +580,21 @@ function actualizarWaveforms(exactTime = null, force = false) {
 
 function playHitsound() {
     if (!audioCtx) return;
+    if (!(volumenHitsound > 0)) return; // slider Hitsound en 0
     if (audioCtx.state === "suspended") audioCtx.resume();
     if (hitSoundBuffer) {
         const source = audioCtx.createBufferSource();
         source.buffer = hitSoundBuffer;
-        source.connect(audioCtx.destination);
+        const gain = audioCtx.createGain();
+        gain.gain.value = volumenHitsound;
+        source.connect(gain);
+        gain.connect(audioCtx.destination);
+        source.onended = () => { try { source.disconnect(); gain.disconnect(); } catch (e) { } };
         source.start(0);
     } else if (hitSoundAudio) {
         try {
             const a = hitSoundAudio.cloneNode();
-            a.volume = 1;
+            a.volume = volumenHitsound;
             a.play().catch(() => synthHitsound());
         } catch (e) { synthHitsound(); }
     } else {
@@ -588,31 +610,83 @@ function synthHitsound() {
     osc.type = "sine";
     osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.05);
-    gain.gain.setValueAtTime(0.6, audioCtx.currentTime);
+    gain.gain.setValueAtTime(Math.max(0.001, 0.6 * volumenHitsound), audioCtx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
     osc.start();
     osc.stop(audioCtx.currentTime + 0.05);
 }
 
-/** Compat: volumen siempre 1.0 (UI de volumen eliminada). */
-function actualizarVolumenCancion(_vol) {
-    fijarVolumenPistas();
+function _mostrarVolumen(idValor, vol) {
+    const el = document.getElementById(idValor);
+    if (el) el.textContent = Math.round(vol * 100) + '%';
 }
 
-/** Mute: GainNode 0/1 si WA; HTMLAudio.muted siempre. */
+function _guardarVolumenes() {
+    try {
+        localStorage.setItem(VOLUMENES_LS_KEY, JSON.stringify({
+            inst: volumenInst, vocales: volumenVocales, hitsound: volumenHitsound
+        }));
+    } catch (e) { }
+}
+
+/** Slider "Instrumental": solo cambia el gain/volume del Inst (sin seek). */
+function actualizarVolumenCancion(vol) {
+    volumenInst = _clampVol(vol, volumenInst);
+    _mostrarVolumen('song-volume-value', volumenInst);
+    aplicarMuteEstadosUI();
+    _guardarVolumenes();
+}
+
+/** Slider "Vocales": volumen de las dos voces (v1 = player, v2 = enemy). */
+function actualizarVolumenVocales(vol) {
+    volumenVocales = _clampVol(vol, volumenVocales);
+    _mostrarVolumen('vocals-volume-value', volumenVocales);
+    aplicarMuteEstadosUI();
+    _guardarVolumenes();
+}
+
+/** Slider "Hitsound": se aplica en playHitsound/synthHitsound. */
+function actualizarVolumenHitsound(vol) {
+    volumenHitsound = _clampVol(vol, volumenHitsound);
+    _mostrarVolumen('hitsound-volume-value', volumenHitsound);
+    _guardarVolumenes();
+}
+
+/** Restaura los sliders guardados (localStorage) al cargar la página. */
+function restaurarVolumenesGuardados() {
+    let data = null;
+    try { data = JSON.parse(localStorage.getItem(VOLUMENES_LS_KEY) || 'null'); } catch (e) { data = null; }
+    if (data && typeof data === 'object') {
+        // Instrumental NO se restaura: siempre arranca en 50%
+        volumenVocales = _clampVol(data.vocales, 1);
+        volumenHitsound = _clampVol(data.hitsound, 1);
+    }
+    const pares = [
+        ['song-volume-slider', 'song-volume-value', volumenInst],
+        ['vocals-volume-slider', 'vocals-volume-value', volumenVocales],
+        ['hitsound-volume-slider', 'hitsound-volume-value', volumenHitsound]
+    ];
+    pares.forEach(([idSlider, idValor, vol]) => {
+        const sl = document.getElementById(idSlider);
+        if (sl) sl.value = String(vol);
+        _mostrarVolumen(idValor, vol);
+    });
+}
+
+/** Mute: GainNode (0 | volumen) si WA; HTMLAudio.muted siempre. */
 function toggleMute(track, isMuted) {
     const muted = !!isMuted;
     if (track === "inst") {
         if (audioInst) audioInst.muted = muted;
-        if (waGains.inst) waGains.inst.gain.value = muted ? 0 : 1;
+        if (waGains.inst) waGains.inst.gain.value = muted ? 0 : volumenInst;
     }
     if (track === "v1") {
         if (audioVoice1) audioVoice1.muted = muted;
-        if (waGains.v1) waGains.v1.gain.value = muted ? 0 : 1;
+        if (waGains.v1) waGains.v1.gain.value = muted ? 0 : volumenVocales;
     }
     if (track === "v2") {
         if (audioVoice2) audioVoice2.muted = muted;
-        if (waGains.v2) waGains.v2.gain.value = muted ? 0 : 1;
+        if (waGains.v2) waGains.v2.gain.value = muted ? 0 : volumenVocales;
     }
 }
 
@@ -625,21 +699,21 @@ function aplicarMuteEstadosUI() {
     const mV2 = !!(muteEnemy && muteEnemy.checked);
 
     if (audioInst) {
-        audioInst.volume = 1;
+        audioInst.volume = volumenInst;
         audioInst.muted = mInst;
     }
     if (audioVoice1) {
-        audioVoice1.volume = 1;
+        audioVoice1.volume = volumenVocales;
         audioVoice1.muted = mV1;
     }
     if (audioVoice2) {
-        audioVoice2.volume = 1;
+        audioVoice2.volume = volumenVocales;
         audioVoice2.muted = mV2;
     }
     ensureWaGains();
-    if (waGains.inst) waGains.inst.gain.value = mInst ? 0 : 1;
-    if (waGains.v1) waGains.v1.gain.value = mV1 ? 0 : 1;
-    if (waGains.v2) waGains.v2.gain.value = mV2 ? 0 : 1;
+    if (waGains.inst) waGains.inst.gain.value = mInst ? 0 : volumenInst;
+    if (waGains.v1) waGains.v1.gain.value = mV1 ? 0 : volumenVocales;
+    if (waGains.v2) waGains.v2.gain.value = mV2 ? 0 : volumenVocales;
 }
 
 /**
@@ -784,4 +858,9 @@ try {
     window.startWaPlayback = startWaPlayback;
     window.pauseWaPlayback = pauseWaPlayback;
     window.seekWaPlayback = seekWaPlayback;
+    window.actualizarVolumenCancion = actualizarVolumenCancion;
+    window.actualizarVolumenVocales = actualizarVolumenVocales;
+    window.actualizarVolumenHitsound = actualizarVolumenHitsound;
 } catch (e) { }
+
+try { restaurarVolumenesGuardados(); } catch (e) { }

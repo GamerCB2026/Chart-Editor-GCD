@@ -20,9 +20,12 @@ const CARRILES_OPONENTE = [4, 5, 6, 7];
 let globalZoomFactor = 0.65;
 let notaSeleccionada = null;
 let eventoSeleccionado = null;
+let eventosSeleccionados = new Set(); // V0.8.2k: multi-selección de eventos (claves "fila" / "fila~n")
 let metadataSeleccionada = false;
 let dificultadActiva = "normal";
 
 let lastHitTime = -1;
 let hitSoundBuffer = null;
 let hitSoundAudio = null;
+// V0.8.2: volumen del hitsound (slider), aplicado a buffer/HTMLAudio/synth.
+let volumenHitsound = 1;

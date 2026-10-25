@@ -110,6 +110,8 @@ function clonLimpiarChartParaLS(chart) {
 		girlfriend: chart.girlfriend || "gf",
 		album: chart.album || "volume1",
 		difficulty: chart.difficulty || 3,
+		ratings: chart.ratings && typeof chart.ratings === "object" ? JSON.parse(JSON.stringify(chart.ratings)) : {},
+		stickerPack: typeof chart.stickerPack === "string" ? chart.stickerPack : "",
 		stage: chart.stage || "stage",
 		totalRows: chart.totalRows || 0,
 		activeDifficulty: chart.activeDifficulty || "normal",
@@ -120,6 +122,15 @@ function clonLimpiarChartParaLS(chart) {
 		out.events = JSON.parse(JSON.stringify(chart.events || {}));
 		if (chart.difficulties && typeof chart.difficulties === "object") {
 			out.difficulties = JSON.parse(JSON.stringify(chart.difficulties));
+		}
+		// V0.8.2j: velocidad por dificultad y variaciones (songVariations)
+		if (chart.scrollSpeeds && typeof chart.scrollSpeeds === "object") out.scrollSpeeds = JSON.parse(JSON.stringify(chart.scrollSpeeds));
+		if (chart.metaExtra && typeof chart.metaExtra === "object") out.metaExtra = JSON.parse(JSON.stringify(chart.metaExtra));
+		if (Array.isArray(chart.dificultadesOriginales)) out.dificultadesOriginales = chart.dificultadesOriginales.slice();
+		if (chart.variaciones && typeof chart.variaciones === "object" && Object.keys(chart.variaciones).length) {
+			out.variaciones = JSON.parse(JSON.stringify(chart.variaciones));
+			out.ordenVariaciones = Array.isArray(chart.ordenVariaciones) ? chart.ordenVariaciones.slice() : Object.keys(chart.variaciones);
+			out.variacionActiva = chart.variacionActiva || "default";
 		}
 	} catch (e) {
 		throw new Error("No se pudo serializar el chart (referencias no válidas).");
@@ -306,6 +317,7 @@ async function guardarEnArchivador() {
 			v1: fileRawV1 || undefined,
 			v2: fileRawV2 || undefined
 		});
+		if (typeof guardarAudiosVariacionesArchivador === "function") await guardarAudiosVariacionesArchivador(limpio.id);
 	} catch (e) {
 		audioOk = false;
 		audioMsg = e && e.message ? e.message : String(e);
