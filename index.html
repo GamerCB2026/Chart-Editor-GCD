@@ -1,14 +1,33 @@
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
+<script>try{if(localStorage.getItem("gcd_tema_v1")==="light")document.documentElement.setAttribute("data-theme","light")}catch(e){}</script>
 <head>
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#000000">
+    <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
+    <link rel="icon" type="image/png" sizes="48x48" href="icon-48.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="icon-96.png">
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+    <link rel="canonical" href="https://gamercb2026.github.io/Chart-Editor-GCD/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="FNF Chart Editor GCD">
+    <meta property="og:title" content="FNF Chart Editor GCD - V0.8.2 Event Update">
+    <meta property="og:description" content="Herramienta web para crear y editar charts de Friday Night Funkin V-Slice.">
+    <meta property="og:url" content="https://gamercb2026.github.io/Chart-Editor-GCD/">
+    <meta property="og:image" content="https://gamercb2026.github.io/Chart-Editor-GCD/PRM/ImagenPRM1.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:type" content="image/png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="FNF Chart Editor GCD - V0.8.2 Event Update">
+    <meta name="twitter:description" content="Herramienta web para crear y editar charts de Friday Night Funkin V-Slice.">
+    <meta name="twitter:image" content="https://gamercb2026.github.io/Chart-Editor-GCD/PRM/ImagenPRM1.png">
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"FNF Chart Editor GCD","url":"https://gamercb2026.github.io/Chart-Editor-GCD/","image":"https://gamercb2026.github.io/Chart-Editor-GCD/PRM/ImagenPRM1.png","applicationCategory":"MultimediaApplication","operatingSystem":"Web","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>FNF Chart Editor GCD BugFix/Update - V0.8.1 BETA 1 </title>
+    <title>FNF Chart Editor GCD - V0.8.2 Event Update</title>
     <meta name="description" content="FNF Chart Editor GCD es una herramienta web para crear y editar charts de Friday Night Funkin V-Slice.">
     <meta name="google-site-verification" content="HoPFeGB2vyj6WGcWtANG3RN5dgnxbF1lW8QlIJo7qxg" />
     
@@ -16,18 +35,27 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- TUS ESTILOS MODULARES -->
-    <link rel="stylesheet" href="css/base.css">
-    <link rel="stylesheet" href="css/menu.css">
-    <link rel="stylesheet" href="css/charter.css">
-    <link rel="stylesheet" href="css/ImportChartMenu.css">
-    <link rel="stylesheet" href="css/mobile.css">
-    <link rel="stylesheet" href="css/StageEditor.css">
+    <link rel="stylesheet" href="css/base.css?v=082m">
+    <link rel="stylesheet" href="css/menu.css?v=082m">
+    <link rel="stylesheet" href="css/charter.css?v=084v">
+    <link rel="stylesheet" href="css/ImportChartMenu.css?v=082m">
+    <link rel="stylesheet" href="css/mobile.css?v=082m">
+    <link rel="stylesheet" href="css/StageEditor.css?v=082m">
+    <link rel="stylesheet" href="css/EventUpdate.css?v=082m">
+    <link rel="stylesheet" href="css/NoteEvents.css?v=082m">
+    <!-- UI cuadrada profesional (cargue al final para ganar todos los overrides) -->
+    <link rel="stylesheet" href="css/SquareUI.css?v=083t">
+    <link rel="stylesheet" href="css/GCDUpdate.css?v=082n">
+    <link rel="stylesheet" href="css/CharteoRapido.css?v=082r5b">
+    <link rel="stylesheet" href="css/TemaClaro.css?v=082r5b">
 </head>
 <body class="portrait-allowed">
-    <div class="beta-badge">V0.8.1</div>
+    <div class="beta-badge">V0.8.2 <span class="beta-badge-name">Event Update</span></div>
 
     <input type="file" id="import-fnfc-input" accept=".fnfc" style="display: none;" onchange="procesarArchivoFNFC(this)">
     <input type="file" id="import-codename-input" accept=".json" style="display: none;" onchange="procesarArchivoCodename(this)">
+    <input type="file" id="import-psych-input" accept=".json" style="display: none;" onchange="procesarArchivoPsych(this)">
+    <input type="file" id="import-legacy-input" accept=".json" style="display: none;" onchange="procesarArchivoLegacy(this)">
     
     <div id="orientation-warning">
         <img src="Icons/GiraTuCel.png" alt="Gira tu dispositivo">
@@ -89,6 +117,15 @@
                 </div>
                 <div class="setting-item">
                     <div class="setting-info">
+                        <div class="setting-name">Pantalla completa</div>
+                        <div class="setting-desc">Usa toda la pantalla (PC y celular). En celular horizontal intenta fijar la orientación.</div>
+                    </div>
+                    <div class="theme-selector-row">
+                        <div class="theme-select-card fullscreen-btn-gcd" id="fullscreen-btn" role="button" onclick="alternarPantallaCompletaGCD()"><i class="fa-solid fa-expand"></i> <span id="fullscreen-btn-label">Activar</span></div>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
                         <div class="setting-name">Zoom de la Grilla (Escala)</div>
                         <div class="setting-desc">Ajusta el tamaño del área de notas para pantallas pequeñas.</div>
                     </div>
@@ -116,23 +153,47 @@
             
             <div class="credits-list">
                 <div class="credit-group">
-                    <h3><i class="fa-solid fa-crown" style="color: #ffdf00; margin-right: 5px;"></i> CREADOR PRINCIPAL</h3>
-                    <div class="credit-card owner">
-                        <span class="credit-name">GamerCB</span>
-                        <span class="credit-role">Desarrollo Base de la Demo 1 y creador de la pagina</span>
-                    </div>
+                    <h3><i class="fa-solid fa-crown" style="color: #ffdf00; margin-right: 5px;"></i> OWNER</h3>
+                    <a class="credit-card owner" href="https://www.youtube.com/@GamerCB2026" target="_blank" rel="noopener noreferrer" title="Canal de YouTube de GamerCB">
+                        <span class="credit-avatar" data-initial="G"><img src="Credits/GamerCB.png" alt="GamerCB" loading="lazy" onerror="this.remove()"></span>
+                        <span class="credit-info">
+                            <span class="credit-name">GamerCB</span>
+                            <span class="credit-role">Desarrollo Base de la Demo 1 y creador de la pagina</span>
+                        </span>
+                        <i class="fa-solid fa-arrow-up-right-from-square credit-link-icon" aria-hidden="true"></i>
+                    </a>
                 </div>
 
                 <div class="credit-group" style="margin-top: 15px;">
-                    <h3><i class="fa-solid fa-handshake" style="color: #5de7ff; margin-right: 5px;"></i> COLABORADORES & AYUDA</h3>
-                    <div class="credit-card helper">
-                        <span class="credit-name">Edwin</span>
-                        <span class="credit-role">Programador de la pagina, desarrollador del chart editor y gran ayudante en el código.</span>
-                    </div>
-                    <div class="credit-card helper">
-                        <span class="credit-name">Jeyzel Art's</span>
-                        <span class="credit-role">Arte de la página web del Chart Editor Online.</span>
-                    </div>
+                    <h3><i class="fa-solid fa-code" style="color: #5de7ff; margin-right: 5px;"></i> PROGRAMADORES</h3>
+                    <a class="credit-card helper" href="https://www.youtube.com/channel/UCjnqOVJVlO4Miy2BhbVZmwA" target="_blank" rel="noopener noreferrer" title="Canal de YouTube de Edwin">
+                        <span class="credit-avatar" data-initial="E"><img src="Credits/Edwin.png" alt="Edwin" loading="lazy" onerror="this.remove()"></span>
+                        <span class="credit-info">
+                            <span class="credit-name">Edwin</span>
+                            <span class="credit-role">Programador de la pagina, desarrollador del chart editor y gran ayudante en el código.</span>
+                        </span>
+                        <i class="fa-solid fa-arrow-up-right-from-square credit-link-icon" aria-hidden="true"></i>
+                    </a>
+                </div>
+
+                <div class="credit-group" style="margin-top: 15px;">
+                    <h3><i class="fa-solid fa-palette" style="color: #ff91f1; margin-right: 5px;"></i> ARTISTAS</h3>
+                    <a class="credit-card artist" href="https://www.youtube.com/@JeyzelArts07" target="_blank" rel="noopener noreferrer" title="Canal de YouTube de Jeyzel Art's">
+                        <span class="credit-avatar" data-initial="J"><img src="Credits/Jeyzel.png" alt="Jeyzel Art's" loading="lazy" onerror="this.remove()"></span>
+                        <span class="credit-info">
+                            <span class="credit-name">Jeyzel Art's</span>
+                            <span class="credit-role">Arte de la página web del Chart Editor Online.</span>
+                        </span>
+                        <i class="fa-solid fa-arrow-up-right-from-square credit-link-icon" aria-hidden="true"></i>
+                    </a>
+                    <a class="credit-card artist" href="https://www.youtube.com/channel/UCG1qp616TBicoRyesQDFJMQ" target="_blank" rel="noopener noreferrer" title="Canal de YouTube de Deyrox">
+                        <span class="credit-avatar" data-initial="D"><img src="Credits/Deyrox.png" alt="Deyrox" loading="lazy" onerror="this.remove()"></span>
+                        <span class="credit-info">
+                            <span class="credit-name">Deyrox</span>
+                            <span class="credit-role">Dibujante de la página Chart Editor GCD con algunos dibujos y cambios de página</span>
+                        </span>
+                        <i class="fa-solid fa-arrow-up-right-from-square credit-link-icon" aria-hidden="true"></i>
+                    </a>
                 </div>
 
                 <div class="credit-group" style="margin-top: 20px;">
@@ -153,11 +214,11 @@
                 <div class="top-menu-btn" onclick="toggleMenuArchivos(event)">ARCHIVOS</div>
 <div class="dropdown-menu">
                     <div class="dropdown-item" onclick="menuNuevoChart()"><i class="fa-solid fa-file-circle-plus" style="margin-right: 6px;"></i> Nuevo Chart</div>
-                    <div class="dropdown-item" onclick="menuAbrirChart()"><i class="fa-solid fa-folder-open" style="margin-right: 6px;"></i> Abrir Chart (.fnfc)</div>
+                    <div class="dropdown-item" onclick="menuAbrirChart()"><i class="fa-solid fa-folder-open" style="margin-right: 6px;"></i> Abrir / Importar Chart</div>
                     
                     <!-- Archivar / Guardar En El Archivador -->
                     <div class="dropdown-item" id="menu-item-archivar" onclick="menuArchivarChart()">
-                        <i class="fa-solid fa-box-archive" style="margin-right: 6px; color: #5de7ff;"></i>
+                        <img class="audioguard-icon" src="Icons/AudioGuard.PNG" alt="" aria-hidden="true">
                         <span id="menu-item-archivar-label">Archivar Chart</span>
                     </div>
                     
@@ -166,18 +227,58 @@
                     <div class="dropdown-item" onclick="menuExit()"><i class="fa-solid fa-door-open" style="margin-right: 6px;"></i> Exit</div>
                 </div>
             </div>
-            <div class="top-menu-btn">EDITOR</div>
-            <div class="top-menu-btn">VISTA</div>
-            <div class="top-menu-btn active-tab">AUDIO</div>
+            <div class="menu-item-wrapper" id="menu-editor-wrapper">
+                <div class="top-menu-btn" onclick="toggleMenuEditor(event)">EDITOR <span class="editor-selection-count" id="editor-selection-count"></span></div>
+                <div class="dropdown-menu editor-dropdown">
+                    <div class="dropdown-item" data-accion="seleccionarTodo" onclick="accionMenuEditor('seleccionarTodo')"><i class="fa-solid fa-object-group"></i><span class="dropdown-label">Seleccionar todas las flechas</span><kbd class="dropdown-shortcut">Ctrl+A</kbd></div>
+                    <div class="dropdown-item" data-accion="seleccionarOponente" onclick="accionMenuEditor('seleccionarOponente')"><i class="fa-solid fa-skull" style="color: #ff5b84;"></i><span class="dropdown-label">Seleccionar flechas de oponente</span></div>
+                    <div class="dropdown-item" data-accion="seleccionarPlayer" onclick="accionMenuEditor('seleccionarPlayer')"><i class="fa-solid fa-microphone-lines" style="color: #5b84ff;"></i><span class="dropdown-label">Seleccionar flechas de player</span></div>
+                    <div class="dropdown-item dropdown-toggle" data-accion="multi" onclick="accionMenuEditor('multi')"><i class="fa-solid fa-hand-pointer"></i><span class="dropdown-label">Multi-seleccionar flechas</span><span class="dropdown-check"><i class="fa-solid fa-check"></i></span></div>
+                    <div class="dropdown-item dropdown-toggle" data-accion="rango" onclick="accionMenuEditor('rango')" title="PC: clic en el inicio y Shift + clic en el final. Táctil: toca el inicio y luego el final."><i class="fa-solid fa-arrows-up-to-line"></i><span class="dropdown-label">Seleccionador de distancia</span><span class="dropdown-check"><i class="fa-solid fa-check"></i></span></div>
+                    <div class="dropdown-item" data-accion="deseleccionar" onclick="accionMenuEditor('deseleccionar')"><i class="fa-regular fa-square"></i><span class="dropdown-label">Deseleccionar flechas</span><kbd class="dropdown-shortcut">Esc</kbd></div>
+                    <div class="dropdown-item dropdown-toggle" data-accion="mover" onclick="accionMenuEditor('mover')" title="Recortar/Extender pasan a Subir/Bajar y mueven las flechas y eventos seleccionados"><i class="fa-solid fa-up-down"></i><span class="dropdown-label">Mover Notas</span><kbd class="dropdown-shortcut">Alt+↑↓</kbd><span class="dropdown-check"><i class="fa-solid fa-check"></i></span></div>
+                    <div class="dropdown-item" data-accion="quitar" onclick="accionMenuEditor('quitar')"><i class="fa-solid fa-trash-can"></i><span class="dropdown-label">Quitar flechas seleccionadas</span><kbd class="dropdown-shortcut">Supr</kbd></div>
+                    <div class="dropdown-divider"></div>
+                    <div class="dropdown-item" data-accion="copiar" onclick="accionMenuEditor('copiar')"><i class="fa-solid fa-copy"></i><span class="dropdown-label">Copiar flechas</span><kbd class="dropdown-shortcut">Ctrl+C</kbd></div>
+                    <div class="dropdown-item" data-accion="cortar" onclick="accionMenuEditor('cortar')"><i class="fa-solid fa-scissors"></i><span class="dropdown-label">Cortar flechas</span><kbd class="dropdown-shortcut">Ctrl+X</kbd></div>
+                    <div class="dropdown-item" data-accion="pegar" onclick="accionMenuEditor('pegar')"><i class="fa-solid fa-paste"></i><span class="dropdown-label">Pegar flechas</span><kbd class="dropdown-shortcut">Ctrl+V</kbd></div>
+                    <div class="dropdown-divider"></div>
+                    <div class="dropdown-item" data-accion="atrasar" onclick="accionMenuEditor('atrasar')"><i class="fa-solid fa-rotate-left"></i><span class="dropdown-label">Atrasar</span><kbd class="dropdown-shortcut">Ctrl+Z</kbd></div>
+                    <div class="dropdown-item" data-accion="adelantar" onclick="accionMenuEditor('adelantar')"><i class="fa-solid fa-rotate-right"></i><span class="dropdown-label">Adelantar</span><kbd class="dropdown-shortcut">Ctrl+Y</kbd></div>
+                </div>
+            </div>
+            <button type="button" class="multi-select-indicator" id="multi-select-indicator" onclick="alternarMultiSeleccion(false)" title="Desactivar multi-selección" hidden><i class="fa-solid fa-hand-pointer"></i> Multi <i class="fa-solid fa-xmark"></i></button>
+            <button type="button" class="multi-select-indicator rango-select-indicator" id="rango-select-indicator" onclick="alternarSeleccionDistancia(false)" title="Desactivar Seleccionador de distancia" hidden><i class="fa-solid fa-arrows-up-to-line"></i> Distancia <i class="fa-solid fa-xmark"></i></button>
+            <button type="button" class="multi-select-indicator mover-notas-indicator" id="mover-notas-indicator" onclick="alternarModoMoverNotas(false)" title="Desactivar Mover Notas" hidden><i class="fa-solid fa-up-down"></i> Mover <i class="fa-solid fa-xmark"></i></button>
+            <button type="button" class="multi-select-indicator modo-libre-indicator" id="modo-libre-indicator" onclick="abrirVentanaModoLibre()" title="Modo Libre activo: toca para cambiar el imán" hidden><i class="fa-solid fa-feather-pointed"></i> Libre <span id="modo-libre-indicator-valor">100</span></button>
+            <button type="button" class="note-kind-indicator" id="note-kind-indicator" onclick="desactivarNoteKindActivo()" title="Las flechas nuevas llevan este Note Event. Toca para volver a flechas normales." hidden><i class="fa-solid fa-star"></i> <span id="note-kind-indicator-label"></span> <i class="fa-solid fa-xmark"></i></button>
+            <div class="menu-item-wrapper" id="menu-vista-wrapper">
+                <div class="top-menu-btn" onclick="toggleMenuVista(event)">VISTA</div>
+                <div class="dropdown-menu">
+                    <div class="dropdown-item dropdown-toggle" id="menu-item-tema" onclick="alternarTemaGCD()" title="Cambiar entre tema Oscuro y Claro"><i class="fa-solid fa-circle-half-stroke" style="margin-right: 6px; color: #ffdf00;"></i><span class="dropdown-label">Tema: Oscuro</span><span class="dropdown-check"><i class="fa-solid fa-check"></i></span></div>
+                    <div class="dropdown-item dropdown-proximamente" aria-disabled="true" title="Próximamente"><i class="fa-solid fa-gamepad" style="margin-right: 6px; color: #ff91f1;"></i><span class="dropdown-label">FNF GCD</span><span class="dropdown-test-tag">PRÓXIMAMENTE</span></div>
+                </div>
+            </div>
+            <div class="top-menu-btn active-tab audio-tab-btn" id="audio-tab-btn" role="button" aria-pressed="true" title="Mostrar / ocultar el panel de audio" onclick="alternarPanelAudioGCD()">AUDIO</div>
             <div class="menu-item-wrapper" id="menu-windows-wrapper">
                 <div class="top-menu-btn" onclick="toggleMenuWindows(event)">WINDOWS</div>
                 <div class="dropdown-menu">
                     <div class="dropdown-item" onclick="abrirVentanaDificultad()"><i class="fa-solid fa-layer-group" style="margin-right: 6px; color: #ffdf00;"></i> Dificultad</div>
                     <div class="dropdown-item" onclick="abrirVentanaEvents()"><i class="fa-solid fa-bolt" style="margin-right: 6px; color: #ffdf00;"></i> Events</div>
+                    <div class="dropdown-item" id="menu-item-note-events" onclick="abrirVentanaNoteEvents()"><i class="fa-solid fa-star" style="margin-right: 6px; color: #ff91f1;"></i> Evento de Notas</div>
                     <div class="dropdown-item" onclick="abrirVentanaMetadata()"><i class="fa-solid fa-database" style="margin-right: 6px; color: #5de7ff;"></i> Metadata</div>
+                    <div class="dropdown-divider"></div>
+                    <div class="dropdown-item dropdown-toggle" id="menu-item-visualizar-personajes" onclick="alternarVisualizarPersonajes()"><i class="fa-solid fa-user-group" style="margin-right: 6px; color: #ff91f1;"></i> Visualizar personajes <span class="dropdown-test-tag">BETA</span><span class="dropdown-check"><i class="fa-solid fa-check"></i></span></div>
                 </div>
             </div>
             <div class="top-menu-btn" onclick="abrirVentanaHelp()">HELP</div>
+            <div class="menu-item-wrapper" id="menu-extras-wrapper">
+                <div class="top-menu-btn" onclick="toggleMenuExtras(event)">EXTRAS</div>
+                <div class="dropdown-menu extras-dropdown">
+                    <div class="dropdown-item dropdown-toggle" id="menu-item-modo-libre" role="menuitemcheckbox" aria-checked="false" onclick="alternarModoLibre()"><i class="fa-solid fa-feather-pointed" style="margin-right: 6px; color: #5b84ff;"></i><span class="dropdown-label">Modo Libre</span><span class="dropdown-check"><i class="fa-solid fa-check"></i></span></div>
+                    <div class="dropdown-item dropdown-toggle" id="menu-item-charteo-rapido" role="menuitemcheckbox" aria-checked="false" onclick="alternarCharteoRapido()"><i class="fa-solid fa-bolt" style="margin-right: 6px; color: #ffdf00;"></i><span class="dropdown-label">Charteo Rápido</span><span class="dropdown-check"><i class="fa-solid fa-check"></i></span></div>
+                </div>
+            </div>
             <div class="top-prototype-text">PROTOTYPE Functionality is subject to change.</div>
         </div>
 
@@ -253,12 +354,29 @@
                     <div style="font-size: 11px; color: var(--text-sub); font-weight: bold; margin-top: 12px; margin-bottom: 8px;"><i class="fa-solid fa-volume-high"></i> Hitsounds (Click)</div>
                     <div class="checkbox-row">
                         <label class="checkbox-label">
-                            <input type="checkbox" id="hit-enemy"> Enemy
+                            <input type="checkbox" id="hit-enemy" checked> Enemy
                         </label>
                         <label class="checkbox-label">
                             <input type="checkbox" id="hit-player" checked> Player
                         </label>
                     </div>
+
+                    <div class="volume-section-title"><i class="fa-solid fa-music"></i> Volumen Música</div>
+                    <div class="volume-row">
+                        <label for="song-volume-slider">Instrumental</label>
+                        <span class="volume-value" id="song-volume-value">50%</span>
+                    </div>
+                    <input type="range" class="volume-slider" id="song-volume-slider" min="0" max="1" step="0.05" value="0.5" oninput="actualizarVolumenCancion(this.value)">
+                    <div class="volume-row">
+                        <label for="vocals-volume-slider">Vocales</label>
+                        <span class="volume-value" id="vocals-volume-value">100%</span>
+                    </div>
+                    <input type="range" class="volume-slider" id="vocals-volume-slider" min="0" max="1" step="0.05" value="1" oninput="actualizarVolumenVocales(this.value)">
+                    <div class="volume-row">
+                        <label for="hitsound-volume-slider">Hitsound</label>
+                        <span class="volume-value" id="hitsound-volume-value">100%</span>
+                    </div>
+                    <input type="range" class="volume-slider" id="hitsound-volume-slider" min="0" max="1" step="0.05" value="1" oninput="actualizarVolumenHitsound(this.value)">
 
                 </div>
             </div>
@@ -283,21 +401,35 @@
             </div>
 
             <div class="control-panel-right">
-                <div class="panel-section-title" style="text-align: center; margin-bottom: 15px;">Longitud del Sustain</div>
+                <button type="button" class="panel-right-close" onclick="alternarPanelDerechoGCD(false)" title="Ocultar panel" aria-label="Ocultar panel derecho"><i class="fa-solid fa-xmark"></i></button>
+                <div class="panel-section-title" id="sustain-panel-title" style="text-align: center; margin-bottom: 15px;">Longitud del Sustain</div>
                 <div class="sustain-actions-wrapper">
-                    <button class="sustain-btn btn-recortar" onclick="ajustarLongitudNota(-1)"><i class="fa-solid fa-caret-up"></i> Recortar</button>
-                    <button class="sustain-btn btn-extender" onclick="ajustarLongitudNota(1)"><i class="fa-solid fa-caret-down"></i> Extender</button>
+                    <button class="sustain-btn btn-recortar" onclick="accionBotonSustain(-1)"><i class="fa-solid fa-caret-up"></i> Recortar</button>
+                    <button class="sustain-btn btn-extender" onclick="accionBotonSustain(1)"><i class="fa-solid fa-caret-down"></i> Extender</button>
+                </div>
+
+                <div class="panel-section-title personajes-title">Personajes</div>
+                <div class="character-icons-container">
+                    <div class="sidebar-icon-box">
+                        <span class="sidebar-icon-label">OPPONENT</span>
+                        <div class="icon-slot"><img id="sidebar-icon-opponent" alt="" hidden><span class="icon-slot-name" id="sidebar-name-opponent">-</span></div>
+                    </div>
+                    <div class="sidebar-icon-box">
+                        <span class="sidebar-icon-label">PLAYER</span>
+                        <div class="icon-slot"><img id="sidebar-icon-player" alt="" hidden><span class="icon-slot-name" id="sidebar-name-player">-</span></div>
+                    </div>
                 </div>
 
             </div>
+            <button type="button" class="panel-right-tab" id="panel-right-tab" onclick="alternarPanelDerechoGCD(true)" title="Mostrar panel" aria-label="Mostrar panel derecho"><i class="fa-solid fa-chevron-left"></i></button>
         </div>
 
         <div id="mobile-sustain-bar" class="mobile-sustain-bar" aria-label="Controles de sustain">
-            <button type="button" class="mobile-sustain-btn btn-recortar" onclick="ajustarLongitudNota(-1)" aria-label="Recortar sustain">
+            <button type="button" class="mobile-sustain-btn btn-recortar" onclick="accionBotonSustain(-1)" aria-label="Recortar sustain">
                 <i class="fa-solid fa-arrow-up"></i>
                 <span>Recortar</span>
             </button>
-            <button type="button" class="mobile-sustain-btn btn-extender" onclick="ajustarLongitudNota(1)" aria-label="Extender sustain">
+            <button type="button" class="mobile-sustain-btn btn-extender" onclick="accionBotonSustain(1)" aria-label="Extender sustain">
                 <i class="fa-solid fa-arrow-down"></i>
                 <span>Extender</span>
             </button>
@@ -306,6 +438,29 @@
         <div class="bottom-playback-bar">
             <div class="playback-info-left"><span id="txt-time">00:00.00</span><span>Beat: 0.00</span></div>
             <div class="playback-info-right"><span id="display-song-name">Normal</span><button id="display-song-difficulty" class="playback-difficulty-button" type="button" onclick="cambiarDificultadSiguiente()">NORMAL</button><span id="display-song-bpm">BPM: 160</span></div>
+        </div>
+    </div>
+
+    <!-- V0.8.2k: EXTRAS > Modo Libre (js/ModoLibre.js) -->
+    <div class="floating-editor-window modo-libre-window" id="modo-libre-window" role="dialog" aria-labelledby="modo-libre-window-title" aria-hidden="true">
+        <div class="floating-window-header" id="modo-libre-window-header">
+            <div class="floating-window-title" id="modo-libre-window-title"><i class="fa-solid fa-feather-pointed"></i> Modo Libre</div>
+            <button class="floating-window-close" type="button" onclick="cerrarVentanaModoLibre()" aria-label="Cerrar Modo Libre"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="floating-window-body">
+            <div class="modo-libre-control">
+                <div class="modo-libre-numero">
+                    <span class="modo-libre-label" id="modo-libre-label">IMÁN A LA CASILLA</span>
+                    <span class="modo-libre-valor" id="modo-libre-valor">100</span>
+                </div>
+                <div class="modo-libre-botones">
+                    <button type="button" id="modo-libre-mas" onclick="cambiarImanModoLibre(1)" aria-label="Subir imán (+5)"><i class="fa-solid fa-plus"></i></button>
+                    <button type="button" id="modo-libre-menos" onclick="cambiarImanModoLibre(-1)" aria-label="Bajar imán (-5)"><i class="fa-solid fa-minus"></i></button>
+                </div>
+            </div>
+            <div class="modo-libre-track"><div class="modo-libre-barra" id="modo-libre-barra"></div></div>
+            <div class="events-classic-hint" id="modo-libre-hint">100: las flechas caen exactas en la casilla.</div>
+            <button type="button" class="modo-libre-off" onclick="activarModoLibre(false)"><i class="fa-solid fa-table-cells"></i> Desactivar Modo Libre</button>
         </div>
     </div>
 
@@ -321,16 +476,27 @@
                 <span class="events-window-status">PROTOTYPE</span>
             </div>
             <div class="event-preview-card">
-                <img src="eventassets/FocusCamera.png" alt="" class="event-preview-icon">
+                <img src="eventassets/FocusCamera.png" alt="" class="event-preview-icon" id="event-preview-icon" data-src="eventassets/FocusCamera.png">
                 <div>
-                    <strong>Focus Camera</strong>
-                    <span>Evento de cámara</span>
+                    <strong id="event-preview-name">Focus Camera</strong>
+                    <span id="event-preview-desc">Evento de cámara</span>
                 </div>
             </div>
+            <button type="button" class="ie-import-main" id="ie-import-button" onclick="iniciarImportacionEventos()"><i class="fa-solid fa-file-import"></i> Importar eventos <span>.hxc</span></button>
             <label class="events-field-label" for="event-type-select">Tipo de evento</label>
-            <select id="event-type-select" class="events-field" disabled>
-                <option>Focus Camera</option>
+            <select id="event-type-select" class="events-field" onchange="cambiarTipoEventoGCD()">
+                <option value="Focus Camera">Focus Camera</option>
+                <option value="Scroll Speed">Scroll Speed</option>
+                <option value="Set Camera Bop">Set Camera Bop</option>
+                <option value="Set Health Icon">Set Health Icon</option>
+                <option value="Zoom Camera">Zoom Camera</option>
+                <option value="Play Animation">Play Animation</option>
             </select>
+            <div class="events-classic-hint" id="event-type-hint">Las casillas vacías de Events crean un Focus Camera.</div>
+            <div class="metadata-section-title">EVENT DATA</div>
+            <!-- V0.8.2 Event Update: formulario de los demás eventos (js/EventosGCD.js) -->
+            <div class="events-type-fields" id="event-data-fields" hidden></div>
+            <div class="events-type-fields" id="focus-camera-fields">
             <label class="events-field-label" for="event-target-select">Objetivo de la cámara</label>
             <select id="event-target-select" class="events-field" onchange="actualizarConfiguracionEvento()" disabled>
                 <option value="opponent">Opponent</option>
@@ -346,17 +512,40 @@
             </div>
             <label class="events-field-label" for="event-duration-input">Duración del efecto</label>
             <input id="event-duration-input" class="events-field" type="number" min="0" step="0.1" value="0" oninput="actualizarConfiguracionEvento()" disabled>
-            <label class="events-field-label" for="event-effect-select">Tipo de efecto</label>
+            <label class="events-field-label" for="event-effect-select">Tipo de efecto (Easing Type)</label>
+            <!-- V0.8.2m: lista oficial de V-Slice (js/EasingGCD.js) con búsqueda -->
             <select id="event-effect-select" class="events-field" onchange="actualizarConfiguracionEvento()" disabled>
-                <option value="CLASSIC">CLASSIC</option>
+                <option value="CLASSIC">Classic (Ignores duration)</option>
             </select>
-            <div class="events-classic-hint">CLASSIC ignora la duración que se coloque.</div>
+            <div class="events-classic-hint" id="event-effect-hint">Classic ignora la duración: la cámara sigue al personaje como en el juego clásico.</div>
+            </div>
             <div class="events-actions-row">
                 <button class="event-delete-button" id="event-delete-button" type="button" onclick="eliminarEventoSeleccionado()" disabled><i class="fa-solid fa-trash"></i> Eliminar evento</button>
+                <button class="event-stack-button" id="event-stack-button" type="button" onclick="apilarEventoEnCasillaGCD()" disabled title="Pone otro evento del mismo tipo en esta casilla (luego puedes cambiar su tipo). También: Alt + clic en la casilla."><i class="fa-solid fa-layer-group"></i> Añadir otro evento en esta casilla</button>
             </div>
             <div class="events-empty-state">
                 <i class="fa-solid fa-circle-info"></i>
                 <span>Selecciona un evento para editar su configuración.</span>
+            </div>
+            <!-- V0.8.2i: Importar eventos de V-Slice desde .hxc (js/ImportarEventos.js) -->
+            <div class="ie-section" id="ie-section">
+                <div class="metadata-section-title">EVENTOS IMPORTADOS</div>
+                <div class="ie-mod-info" id="ie-mod-info">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <div>
+                        <strong>Estos eventos tienen que estar en tu mod</strong>
+                        <p>GCD solo escribe el evento en el <code>song-chart.json</code> (<code>{ "t", "e", "v" }</code>). Lo que hace en el juego lo programa su script, así que para que funcione al jugar:</p>
+                        <ul>
+                            <li>El <code>.hxc</code> del evento va en <code>tu-mod/scripts/</code> (por ejemplo <code>scripts/events/</code>).</li>
+                            <li>Lo que use el script (fuentes, imágenes, sonidos, shaders) también tiene que estar en el mod.</li>
+                            <li>El ícono (<code>.png</code> + <code>.xml</code>) en <code>images/ui/chart-editor/events/</code> solo lo usa el editor oficial; en el juego no hace falta.</li>
+                        </ul>
+                        <p>Si el chart trae un evento que GCD no conoce, se conserva tal cual (sale con <strong>?</strong>) e importar su <code>.hxc</code> te deja editarlo.</p>
+                    </div>
+                </div>
+                <div class="ie-import-panel" id="ie-import-panel" hidden></div>
+                <div class="ie-list" id="ie-list"></div>
+                <input type="file" id="ie-file" multiple hidden>
             </div>
         </div>
     </div>
@@ -372,12 +561,17 @@
                 <span class="events-window-kicker">CHART DIFFICULTY</span>
                 <span class="events-window-status">MULTI</span>
             </div>
-            <div class="difficulty-list" id="difficulty-list"></div>
+            <div class="difficulty-list difficulty-tree" id="difficulty-list" role="tree"></div>
             <div class="difficulty-actions">
-                <button class="difficulty-action-button" type="button" disabled><i class="fa-solid fa-plus"></i> Añadir dificultad</button>
-                <button class="difficulty-action-button" type="button" onclick="quitarDificultadActiva()"><i class="fa-solid fa-minus"></i> Quitar dificultad</button>
+                <button class="difficulty-action-button" id="difficulty-add-button" type="button" onclick="mostrarEntradaNuevaDificultad()"><i class="fa-solid fa-plus"></i> Añadir dificultad</button>
+                <button class="difficulty-action-button" id="difficulty-remove-button" type="button" onclick="quitarDificultadActiva()"><i class="fa-solid fa-minus"></i> Quitar dificultad</button>
+            </div>
+            <div class="difficulty-actions difficulty-download-actions">
+                <button class="difficulty-action-button" id="difficulty-download-chart" type="button" onclick="descargarJsonVariacionActivaGCD('chart')" title="Descarga el chart.json de la variación actual (igual que dentro del .fnfc)"><i class="fa-solid fa-download"></i> Descargar Chart</button>
+                <button class="difficulty-action-button" id="difficulty-download-metadata" type="button" onclick="descargarJsonVariacionActivaGCD('metadata')" title="Descarga el metadata.json de la variación actual (igual que dentro del .fnfc)"><i class="fa-solid fa-download"></i> Descargar Metadata</button>
             </div>
             <button class="difficulty-restore-button" type="button" onclick="restaurarDificultadesFaltantes()"><i class="fa-solid fa-rotate-left"></i> Añadir dificultad faltante</button>
+            <button class="difficulty-variation-button" type="button" onclick="mostrarEntradaNuevaVariacion()" title="Crear una variación nueva como copia de la variación activa"><i class="fa-solid fa-folder-plus"></i> Añadir variación de canción</button>
         </div>
     </div>
 
@@ -390,7 +584,7 @@
         <div class="floating-window-body">
             <div class="events-window-toolbar">
                 <span class="events-window-kicker">SONG METADATA</span>
-                <span class="events-window-status">EDITABLE</span>
+                <span class="events-window-status" id="metadata-variation-status" title="Cada variación tiene su propia metadata">DEFAULT</span>
             </div>
             <label class="events-field-label" for="metadata-song-name">Nombre</label>
             <input id="metadata-song-name" class="events-field" type="text" oninput="actualizarMetadataDesdeInterfaz()">
@@ -402,7 +596,9 @@
             <input id="metadata-bpm" class="events-field" type="number" min="20" max="400" step="0.01" oninput="actualizarMetadataDesdeInterfaz()">
             <label class="events-field-label" for="metadata-album">Album</label>
             <input id="metadata-album" class="events-field" type="text" oninput="actualizarMetadataDesdeInterfaz()">
-            <label class="events-field-label" for="metadata-difficulty">Dificultad (1-15)</label>
+            <label class="events-field-label" for="metadata-stickers">Stickers</label>
+            <input id="metadata-stickers" class="events-field" type="text" placeholder="(vacío = los del personaje)" title="playData.stickerPack de V-Slice (ej: standard-bf). Vacío = se usan los stickers del personaje." oninput="actualizarMetadataDesdeInterfaz()">
+            <label class="events-field-label" for="metadata-difficulty" id="metadata-difficulty-label">Dificultad (1-15)</label>
             <input id="metadata-difficulty" class="events-field" type="number" min="1" max="15" step="1" oninput="actualizarMetadataDesdeInterfaz()">
             <div class="metadata-section-title">PERSONAJES</div>
             <label class="events-field-label" for="metadata-player">BF</label>
@@ -430,23 +626,80 @@
             <section>
                 <h3>Inicio y archivos</h3>
                 <p><strong>Nuevo Chart:</strong> escribe nombre, BPM, compositor y charter. Después carga el instrumental y, opcionalmente, las dos voces. En el Paso 1 también puedes <strong>Importar .fnfc</strong> para abrir un chart existente.</p>
-                <p><strong>Abrir Chart:</strong> importa un archivo <code>.fnfc</code> con sus notas, eventos, metadata y audios incluidos.</p>
+                <p><strong>Abrir / Importar Chart:</strong> abre el Import Center. Importa un <code>.fnfc</code> (V-Slice, con notas, eventos, metadata y audios incluidos) o un <code>chart.json</code> de Codename, Psych (moderno y legacy) o Legacy (Vanilla/Kade). Los .json no traen audio: cárgalo después con Re-vincular.</p>
                 <p><strong>Archivar / Guardar En El Archivador:</strong> guarda notas/eventos en este navegador y los audios en IndexedDB (persisten al reabrir). Solo usa <strong>Re-vincular</strong> si faltan audios.</p>
             </section>
             <section>
                 <h3>Editor de notas</h3>
                 <p>Las ocho columnas centrales son cuatro carriles del oponente y cuatro del jugador. Al tocar o hacer clic en una casilla se coloca una flecha; al repetirlo se elimina o selecciona.</p>
-                <p>Selecciona una nota y usa <strong>Recortar</strong> o <strong>Extender</strong> para cambiar su sustain.</p>
+                <p>Selecciona una nota y usa <strong>Recortar</strong> o <strong>Extender</strong> para cambiar su sustain (si hay varias seleccionadas, cambia todas).</p>
                 <p>La columna de Events está separada y usa un borde azul oscuro para distinguirla de las notas.</p>
             </section>
             <section>
+                <h3>Menú Editor (Event Update)</h3>
+                <p><strong>Seleccionar todas</strong> (Ctrl+A), <strong>Deseleccionar</strong> (Esc) y <strong>Quitar flechas seleccionadas</strong> (Supr).</p>
+                <p><strong>Multi-seleccionar:</strong> actívalo desde EDITOR y cada toque suma o quita flechas de la selección. En PC también funciona Shift + clic o Ctrl + clic.</p>
+                <p><strong>Copiar</strong> (Ctrl+C), <strong>Cortar</strong> (Ctrl+X) y <strong>Pegar</strong> (Ctrl+V). Al pegar, las flechas empiezan en la línea de reproducción y respetan carriles, distancias y sustains.</p>
+                <p><strong>Atrasar</strong> (Ctrl+Z) deshace el último cambio, hasta llegar al primero. <strong>Adelantar</strong> (Ctrl+Y o Ctrl+Shift+Z) lo vuelve a aplicar. Hacer un cambio nuevo borra lo que se podía adelantar.</p>
+            </section>
+            <section>
+                <h3>Visualizar personajes</h3>
+                <p>En <strong>Windows &gt; Visualizar personajes</strong> se abren las ventanas Opponent y Player. Toca <strong>Importar personaje</strong> y elige, en orden, el <strong>.json</strong> del personaje (formato V-Slice o Psych), su <strong>.xml</strong> (Sparrow) y su <strong>.png</strong>. También puedes elegir los 3 archivos a la vez.</p>
+                <p>Según el <code>renderType</code> del JSON se piden otros archivos: <strong>animateatlas</strong> (Animate Atlas) pide <code>Animation.json</code>, el <code>spritemap1.json</code> y su <code>spritemap1.png</code> (si hay varios spritemaps, elígelos todos). <strong>multisparrow</strong> y <strong>multianimateatlas</strong> piden después los archivos extra de las animaciones que usan otro <code>assetPath</code>: elige todos a la vez (se emparejan por nombre) o usa <strong>Elegir</strong> en cada fila. Con <strong>Omitir faltantes</strong> se carga sin esas animaciones.</p>
+                <p>El personaje hace su idle al ritmo del BPM y, al reproducir, canta con las flechas de su lado (singLEFT, singDOWN, singUP, singRIGHT) y mantiene la pose en los sustains. Usa la lista para probar animaciones, el botón de espejo para voltearlo y la esquina de la ventana para cambiar su tamaño.</p>
+            </section>
+            <section>
+                <h3>Dificultad y variaciones</h3>
+                <p>En <strong>Windows &gt; Dificultad</strong> las dificultades están en carpetas. <strong>Default</strong> tiene easy, normal y hard; toca la carpeta para abrirla o cerrarla y toca una dificultad para editarla. <strong>Añadir dificultad</strong> pide el nombre y la pone debajo de la última de la carpeta elegida; se guarda en el song-metadata y en el song-chart. <strong>Quitar dificultad</strong> quita la que estás editando. Las dos cosas se pueden atrasar y adelantar.</p>
+                <p>Si el <code>.fnfc</code> trae <code>songVariations</code> (por ejemplo <code>player</code> o <code>erect</code>) junto con <code>song-chart-erect.json</code> y <code>song-metadata-erect.json</code>, cada variación sale como otra carpeta con sus dificultades, notas, eventos, BPM, velocidad y audios (<code>Inst-erect.ogg</code>, <code>Voices-bf-erect.ogg</code>…). Al cambiar de variación se pausa la canción y se cambian las pistas. Al guardar el <code>.fnfc</code> se escriben los archivos de cada variación.</p>
+            </section>
+            <section>
+                <h3>Evento de Notas</h3>
+                <p>En <strong>Windows &gt; Evento de Notas</strong> puedes usar notas personalizadas de V-Slice (NoteKind). En <strong>Elegir existente</strong> están las <strong>predeterminadas</strong> del editor oficial, listas sin importar nada: Default (flecha normal), Custom, las de Week 5 y Week 7 y las de Blazin'. Usa el buscador para encontrarlas. Ninguna tiene parámetros. En <strong>Custom</strong> escribe el kind en <strong>Custom Note Type</strong> y las flechas se guardan con ese kind. Las predeterminadas no se pueden eliminar.</p>
+                <p>Para otras notas, toca <strong>Importar</strong> y elige el <code>.hxc</code> de la nota (obligatorio). Después te pide el <code>.json</code> de su NoteStyle, que es opcional: si no lo tienes, toca <strong>No tengo JSON</strong>. Si eliges el JSON, te pide el <code>.xml</code> y el <code>.png</code> de las notas. También puedes elegir varios archivos a la vez.</p>
+                <p>Del <code>.hxc</code> se lee el kind, el nombre, el estilo y los parámetros (<code>super("kind", "Nombre", "estilo", params)</code>). Con JSON + XML + PNG la flecha se ve con el sprite de la nota. Sin JSON se ve la flecha normal con la marca <code>noteassets/EventNote.png</code>. Pasa el mouse sobre una flecha para ver su kind y sus parámetros.</p>
+                <p>En el editor de la nota ajusta los parámetros y usa <strong>Usar al colocar flechas</strong> para que las flechas nuevas sean de ese tipo, <strong>Aplicar a seleccionadas</strong> para cambiar las flechas seleccionadas o <strong>Quitar kind</strong> para volverlas normales. Todo se puede atrasar y adelantar. Las notas importadas salen en <strong>Elegir existente</strong> debajo de las predeterminadas y quedan guardadas en este navegador.</p>
+                <p>Al guardar el <code>.fnfc</code>, cada flecha lleva su kind (<code>k</code>) y sus parámetros (<code>p</code>). Si importas un chart con kinds predeterminados, se reconocen solos. Si trae kinds que no tienes, sus flechas salen con la marca y el kind aparece como "no importado". Para que una nota importada funcione en el juego, su <code>.hxc</code> tiene que estar en <code>tu-mod/scripts/</code> (las predeterminadas ya vienen con el juego).</p>
+            </section>
+            <section>
                 <h3>Events y Metadata</h3>
-                <p>En <strong>Windows &gt; Events</strong>, selecciona una casilla de Events para crear o editar un Focus Camera. Puedes elegir objetivo, duración, offsets X/Y y CLASSIC, además de eliminarlo.</p>
+                <p>En <strong>Windows &gt; Events</strong>, elige el <strong>Tipo de evento</strong> y toca una casilla vacía de la columna Events para crearlo. Toca un evento para editar su <strong>Event Data</strong>; si cambias el tipo de un evento ya puesto, se reemplaza por uno nuevo con valores predeterminados. Cada cambio se puede atrasar y adelantar.</p>
+                <p><strong>Focus Camera:</strong> objetivo, duración, offsets X/Y y tipo de efecto (Easing Type).</p>
+                <p><strong>Scroll Speed</strong> (<code>ScrollSpeed</code>): Target Value (x), Duration (steps), Easing Type, Target Strumline (Both, Opponent o Player) y Absolute.</p>
+                <p><strong>Set Camera Bop</strong> (<code>SetCameraBop</code>): Intensity (x) y Rate (beats/zoom).</p>
+                <p><strong>Set Health Icon</strong> (<code>SetHealthIcon</code>): Character (Player u Opponent), Health Icon ID, Scale, Flip X?, Is Pixel? y offsets X/Y.</p>
+                <p><strong>Zoom Camera</strong> (<code>ZoomCamera</code>): Zoom Level (x), Duration (steps), Mode (Stage Zoom o Absolute Zoom) y Easing Type.</p>
+                <p><strong>Play Animation</strong> (<code>PlayAnimation</code>): Target (personaje), Animation y Force.</p>
+                <p><strong>Importar eventos:</strong> toca <strong>Importar eventos</strong> y elige uno o varios <code>.hxc</code> de eventos de V-Slice (<code>class ... extends ScriptedSongEvent</code>). Del script se lee el id (<code>super('EventId')</code>), el título (<code>getTitle()</code>), el ícono (<code>getIconPath()</code>) y los campos de <code>getEventSchema()</code>: números (float/integer con min, max, step y unidades), texto, casillas (bool) y listas (enum). Si un archivo trae varias clases, se importan todos sus eventos y se ignora lo que no es evento (por ejemplo un ScriptedModule).</p>
+                <p>Si el evento tiene ícono, elige su <code>.png</code> y su <code>.xml</code> (Sparrow) o toca <strong>Omitir icono</strong> para usar <code>eventassets/Default.png</code>. Como el editor oficial, se anima la secuencia de SubTexture con el prefijo <code>&lt;EventId&gt;0</code> (o la animación que nombre el script). Con solo el PNG queda un ícono fijo.</p>
+                <p>Los eventos importados salen en <strong>Tipo de evento</strong> (grupo Importados) y en <strong>Eventos importados</strong>, donde puedes usarlos, cambiar su ícono, reimportar el .hxc o eliminarlos. Quedan guardados en este navegador. En el <code>song-chart.json</code> se guardan como <code>{ "t", "e": "EventId", "v": { ... } }</code> con los nombres y tipos del schema (en las listas se guarda el valor, no el texto). Si un chart trae un evento que no tienes, sale con <strong>?</strong>, sus datos se exportan sin cambios y puedes importar su .hxc desde la ventana. Para que funcione en el juego, el <code>.hxc</code> tiene que estar en <code>tu-mod/scripts/</code>.</p>
+                <p><strong>Easing Type / Tipo de efecto:</strong> la lista oficial de V-Slice (Back, Bounce, Circ, Cube, Elastic, Expo, Quad, Quart, Quint, Sine, Smooth Step y Smoother Step, cada uno In, In/Out y Out, más Linear e Instant). <strong>Classic</strong> solo existe en Focus Camera. Al abrir la lista puedes escribir en <strong>Buscar...</strong> para filtrarla. En el <code>song-chart.json</code> se guarda el valor del juego: <code>linear</code>, <code>INSTANT</code>, <code>CLASSIC</code>, <code>sineIn</code>, <code>backInOut</code>, <code>smootherStepOut</code>... Classic e Instant ignoran la duración. Si un chart trae el formato nuevo (<code>"ease": "sine"</code> + <code>"easeDir": "InOut"</code>) se muestra como Sine In/Out y se guarda igual mientras no lo cambies.</p>
+                <p>En la grilla, los eventos que comparten ícono llevan una etiqueta corta: SS, CB, HI, ZC o PA. Todos se guardan en el <code>song-chart.json</code> del <code>.fnfc</code> con su nombre de V-Slice y se vuelven a leer al importarlo.</p>
                 <p>En <strong>Windows &gt; Metadata</strong>, modifica nombre, compositor, charter, BPM, album, dificultad, personajes y stage. Los cambios se guardan en el proyecto archivado y en el próximo exportado.</p>
             </section>
             <section>
+                <h3>Mover Notas</h3>
+                <p>En <strong>EDITOR &gt; Mover Notas</strong>, los botones <strong>Recortar</strong> y <strong>Extender</strong> pasan a <strong>Subir</strong> y <strong>Bajar</strong>: mueven una casilla todas las flechas y eventos seleccionados, juntos (también con <kbd>Alt</kbd>+<kbd>↑</kbd>/<kbd>↓</kbd>). Para seleccionar flechas y eventos a la vez usa Multi-seleccionar o Shift/Ctrl + clic. Cada flecha conserva su posición dentro de la casilla. Si una flecha cae justo encima de otra que no está seleccionada o se sale de la canción, no se mueve nada. Se puede atrasar y adelantar. Vuelve a tocar Mover Notas para regresar a Recortar/Extender.</p>
+            </section>
+            <section>
+                <h3>Varios eventos en una casilla</h3>
+                <p>Una casilla de Events puede tener varios eventos (solo los que de verdad hay en el chart: uno colocado una vez se ve una sola vez): selecciona uno y toca <strong>Añadir otro evento en esta casilla</strong>: se agrega otro del mismo tipo, ya seleccionado, y puedes cambiar su <strong>Tipo de evento</strong> y su Event Data. Con <kbd>Alt</kbd> + clic en una casilla ocupada se agrega directamente el tipo elegido para casillas nuevas. Se ven pegados en la misma casilla; toca cada ícono para editarlo. En el <code>song-chart.json</code> van por separado con la misma <code>t</code>, y al importar un chart con eventos en el mismo tiempo ya no se pierde ninguno.</p>
+            </section>
+            <section>
+                <h3>Extras: Modo Libre</h3>
+                <p>En <strong>EXTRAS &gt; Modo Libre</strong>, las flechas se colocan donde toques dentro de la casilla. La ventanita tiene el <strong>imán</strong> (0 a 100, de 5 en 5 con + y −): con 100 caen exactas en la casilla, más bajo quedan más libres y con 0 quedan justo donde tocaste. Con Modo Libre activo se toca la <strong>flecha</strong> (no la casilla) para seleccionarla; el espacio vacío es donde no hay flecha.</p>
+                <p>Las flechas libres tienen un <strong>borde gris</strong>. Al seleccionar una, la ventanita muestra su número (qué tan movida está; con varias, el de la última seleccionada). Seleccionar no cambia nada: solo al tocar + / − (o al mover con Subir/Bajar) ese número se aplica a todas las seleccionadas. En el <code>song-chart.json</code> se guarda su tiempo exacto. Al desactivar Modo Libre las flechas libres <strong>se quedan donde están</strong>; las nuevas vuelven a caer en la casilla.</p>
+            </section>
+            <section>
+                <h3>Varias flechas en una casilla (spam)</h3>
+                <p>Si un chart trae 2, 3, 4 o más flechas en el mismo punto de una casilla y carril, se ven como una sola flecha con un contador (<strong>×N</strong>). Al tocarla se selecciona la de encima; al moverla (Subir/Bajar) se separa y las demás quedan a la vista, y un segundo toque quita solo la de encima. Con Shift/Ctrl + clic (o Multi-seleccionar) se toma toda la pila. Al importar y exportar se conservan todas, sin juntar ni duplicar ninguna.</p>
+            <section>
+                <h3>Eventos no reconocidos</h3>
+                <p>Al importar un <code>.fnfc</code> o un chart, los eventos conocidos se adaptan solos (de Psych: Hey! pasa a un solo Play Animation, Camera Follow Pos, Change Scroll Speed, Play Animation). Si quedan eventos que GCD no conoce, aparece un aviso con cada uno para importar su <code>.hxc</code>. Mientras tanto se conservan tal cual. Recuerda que el evento también tiene que estar en tu mod para funcionar al jugar.</p>
+            </section>
+            <section>
                 <h3>Audio y reproducción</h3>
-                <p>Inst es el reloj maestro; las voces se reproducen con HTMLAudio y se hard-sincronizan al Inst. Elige las waveforms y mutea pistas desde el panel izquierdo. El volumen de Inst/Voces está fijo al máximo (ritmo normal).</p>
+                <p>Inst es el reloj maestro; las voces se reproducen con HTMLAudio y se hard-sincronizan al Inst. Elige las waveforms, mutea pistas y ajusta el volumen del Instrumental, las Vocales y el Hitsound desde el panel izquierdo (pestaña AUDIO).</p>
                 <p>Activa los hitsounds para escuchar una señal al pasar por las notas durante la reproducción.</p>
             </section>
             <section>
@@ -459,6 +712,76 @@
                 <p><strong>Táctil:</strong> toca las casillas para colocar notas o Events. Mantén presionada la barra superior de una ventana para moverla.</p>
                 <p>Gira el dispositivo a orientación horizontal para trabajar con la grilla completa. Usa minimizar cuando necesites liberar espacio visual.</p>
             </section>
+        </div>
+    </div>
+
+    <!-- V0.8.2 Event Update: WINDOWS > Evento de Notas (js/NoteEvents.js) -->
+    <div class="floating-editor-window note-events-window" id="note-events-window" role="dialog" aria-labelledby="note-events-window-title" aria-hidden="true">
+        <div class="floating-window-header" id="note-events-window-header">
+            <div class="floating-window-title" id="note-events-window-title"><i class="fa-solid fa-star"></i> Evento de Notas</div>
+            <button class="floating-window-minimize" type="button" onclick="alternarMinimizarNoteEvents()" aria-label="Minimizar Evento de Notas"><i class="fa-solid fa-minus"></i></button>
+            <button class="floating-window-close" type="button" onclick="cerrarVentanaNoteEvents()" aria-label="Cerrar Evento de Notas"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="floating-window-body note-events-body">
+            <div class="events-window-toolbar">
+                <span class="events-window-kicker">EVENTO DE NOTAS</span>
+                <span class="events-window-status">BETA</span>
+            </div>
+            <div class="nk-warning" role="note">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <div>
+                    <strong>Para usar estas Notas Personalizadas, necesitas tener el archivo <code>.hxc</code> en <code>tu-mod/scripts/</code></strong>
+                    <span>Las predeterminadas (Week 5, Week 7 y Blazin') ya vienen con el juego.</span>
+                    <span>Si la nota tiene estilo: el <code>.json</code> va en <code>tu-mod/data/notestyles/</code> y el <code>.xml</code> y el <code>.png</code> en <code>tu-mod/images/</code> según su assetPath (con el prefijo <code>shared:</code> van en <code>tu-mod/shared/images/</code>).</span>
+                </div>
+            </div>
+            <div class="nk-main-actions">
+                <button type="button" class="nk-main-btn" data-vista="importar" onclick="iniciarImportacionNoteKind()"><i class="fa-solid fa-file-import"></i> Importar</button>
+                <button type="button" class="nk-main-btn" data-vista="lista" onclick="mostrarVistaNoteEvents('lista')"><i class="fa-solid fa-list-ul"></i> Elegir existente</button>
+            </div>
+            <div class="nk-content" id="note-events-content"></div>
+            <div class="nk-badge-status" id="nk-badge-status" hidden><i class="fa-solid fa-image"></i> Falta <code>noteassets/EventNote.png</code>: se usa la marca de respaldo.</div>
+            <input type="file" id="note-kind-file" multiple hidden>
+        </div>
+    </div>
+
+    <!-- V0.8.2 Event Update: WINDOWS > Visualizar personajes (js/VisualizarPersonajes.js) -->
+    <div class="char-preview-window opponent" id="char-window-opponent" data-lado="opponent" role="dialog" aria-label="Personaje Opponent" aria-hidden="true">
+        <div class="char-preview-header">
+            <span class="char-preview-title"><i class="fa-solid fa-skull"></i> Opponent<span class="char-preview-name" id="char-name-opponent"></span></span>
+            <button class="char-preview-close" type="button" onclick="cerrarVisualizarPersonajes()" aria-label="Cerrar visualizador de personajes"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="char-preview-body" id="char-body-opponent">
+            <canvas class="char-canvas" id="char-canvas-opponent" aria-label="Vista del personaje Opponent"></canvas>
+            <span class="char-preview-empty"><i class="fa-regular fa-user"></i> Sin personaje</span>
+            <span class="char-anim-label" id="char-anim-opponent"></span>
+            <div class="char-import-steps" id="char-steps-opponent" hidden></div>
+            <input type="file" class="char-file-input" id="char-file-opponent" multiple hidden>
+        </div>
+        <div class="char-preview-toolbar">
+            <button class="char-import-btn" type="button" onclick="importarPersonaje('opponent')" title="Importar personaje (.json + .xml + .png)"><i class="fa-solid fa-file-import"></i> <span class="char-import-label">Importar personaje</span></button>
+            <select class="char-anim-select char-requiere-personaje" id="char-anim-select-opponent" onchange="probarAnimacionPersonaje('opponent', this.value)" title="Probar una animación"></select>
+            <button class="char-tool-btn char-requiere-personaje" type="button" onclick="voltearPersonaje('opponent')" title="Voltear (espejo)" aria-label="Voltear personaje"><i class="fa-solid fa-arrows-left-right"></i></button>
+            <button class="char-tool-btn danger char-requiere-personaje" type="button" onclick="quitarPersonaje('opponent')" title="Quitar personaje" aria-label="Quitar personaje"><i class="fa-solid fa-trash"></i></button>
+        </div>
+    </div>
+    <div class="char-preview-window player" id="char-window-player" data-lado="player" role="dialog" aria-label="Personaje Player" aria-hidden="true">
+        <div class="char-preview-header">
+            <span class="char-preview-title"><i class="fa-solid fa-microphone-lines"></i> Player<span class="char-preview-name" id="char-name-player"></span></span>
+            <button class="char-preview-close" type="button" onclick="cerrarVisualizarPersonajes()" aria-label="Cerrar visualizador de personajes"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="char-preview-body" id="char-body-player">
+            <canvas class="char-canvas" id="char-canvas-player" aria-label="Vista del personaje Player"></canvas>
+            <span class="char-preview-empty"><i class="fa-regular fa-user"></i> Sin personaje</span>
+            <span class="char-anim-label" id="char-anim-player"></span>
+            <div class="char-import-steps" id="char-steps-player" hidden></div>
+            <input type="file" class="char-file-input" id="char-file-player" multiple hidden>
+        </div>
+        <div class="char-preview-toolbar">
+            <button class="char-import-btn" type="button" onclick="importarPersonaje('player')" title="Importar personaje (.json + .xml + .png)"><i class="fa-solid fa-file-import"></i> <span class="char-import-label">Importar personaje</span></button>
+            <select class="char-anim-select char-requiere-personaje" id="char-anim-select-player" onchange="probarAnimacionPersonaje('player', this.value)" title="Probar una animación"></select>
+            <button class="char-tool-btn char-requiere-personaje" type="button" onclick="voltearPersonaje('player')" title="Voltear (espejo)" aria-label="Voltear personaje"><i class="fa-solid fa-arrows-left-right"></i></button>
+            <button class="char-tool-btn danger char-requiere-personaje" type="button" onclick="quitarPersonaje('player')" title="Quitar personaje" aria-label="Quitar personaje"><i class="fa-solid fa-trash"></i></button>
         </div>
     </div>
 
@@ -476,9 +799,26 @@
                 </button>
             </div>
             <div class="import-chart-options">
+                <span class="import-chart-group">Proyecto del editor</span>
                 <button class="import-chart-option fnfc" type="button" onclick="seleccionarImportacion('fnfc')">
                     <span class="import-chart-icon"><i class="fa-solid fa-file-zipper"></i></span>
                     <span class="import-chart-option-copy"><strong>Chart .fnfc</strong><small>Chart V-Slice con audio incluido</small></span>
+                    <i class="fa-solid fa-arrow-right import-chart-arrow"></i>
+                </button>
+                <span class="import-chart-group">Otros engines</span>
+                <button class="import-chart-option json" type="button" onclick="seleccionarImportacion('codename')">
+                    <span class="import-chart-icon"><i class="fa-solid fa-file-code"></i></span>
+                    <span class="import-chart-option-copy"><strong>Codename chart.json</strong><small>Chart de Codename Engine (sin audio)</small></span>
+                    <i class="fa-solid fa-arrow-right import-chart-arrow"></i>
+                </button>
+                <button class="import-chart-option json" type="button" onclick="seleccionarImportacion('psych')">
+                    <span class="import-chart-icon"><i class="fa-solid fa-file-code"></i></span>
+                    <span class="import-chart-option-copy"><strong>Psych chart.json</strong><small>Chart de Psych Engine (moderno y legacy)</small></span>
+                    <i class="fa-solid fa-arrow-right import-chart-arrow"></i>
+                </button>
+                <button class="import-chart-option json" type="button" onclick="seleccionarImportacion('legacy')">
+                    <span class="import-chart-icon"><i class="fa-solid fa-file-code"></i></span>
+                    <span class="import-chart-option-copy"><strong>Legacy chart.json</strong><small>Chart de FNF vanilla / Kade Engine</small></span>
                     <i class="fa-solid fa-arrow-right import-chart-arrow"></i>
                 </button>
             </div>
@@ -582,6 +922,7 @@
                 <p style="font-size: 11px; color: var(--text-sub); padding: 15px 20px 0; font-family: 'Segoe UI', sans-serif;">
                     Al cargar un chart archivado, el navegador borra la música de la memoria por seguridad. Sube los audios aquí para volver a escucharlos.
                 </p>
+                <p id="revincular-variacion-info" style="font-size: 11px; color: #ff91f1; padding: 6px 20px 0; font-family: 'Segoe UI', sans-serif;"></p>
                 <div class="modal-inputs-scroll" style="padding: 10px 20px;">
                     <div class="form-group">
                         <label>inst.ogg (Instrumental)</label>
@@ -627,12 +968,29 @@
 </script>
 
     <!-- TUS SCRIPTS MODULARES -->
-    <script src="js/variables.js?v=082fix"></script>
-    <script src="js/audio.js?v=082fix"></script>
-    <script src="js/charter.js?v=082fix"></script>
-    <script src="js/ImportChart.js?v=082fix"></script>
-    <script src="js/archivador.js?v=082fix"></script>
-    <script src="js/StageEditor.js?v=082fix"></script>
-    <script src="js/menu.js?v=082fix"></script>
+    <script src="js/variables.js?v=082m"></script>
+    <script src="js/audio.js?v=082m"></script>
+    <script src="js/charter.js?v=084v"></script>
+    <script src="js/EditorAcciones.js?v=082m"></script>
+    <script src="js/EasingGCD.js?v=082m"></script>
+    <script src="js/EventosGCD.js?v=082m"></script>
+    <script src="js/AnimateAtlas.js?v=082m"></script>
+    <script src="js/VisualizarPersonajes.js?v=082n3"></script>
+    <script src="js/NoteEvents.js?v=082n3"></script>
+    <script src="js/ImportarEventos.js?v=082n3"></script>
+    <script src="js/astc.js?v=082n3"></script>
+    <script src="js/ImagenesASTC.js?v=082n3"></script>
+    <script src="js/ModoLibre.js?v=082m"></script>
+    <script src="js/PilaNotas.js?v=082m"></script>
+    <script src="js/CharteoRapido.js?v=082r4"></script>
+    <script src="js/SeleccionDistancia.js?v=082r5"></script>
+    <script src="js/ImportChart.js?v=082n"></script>
+    <script src="js/archivador.js?v=082n"></script>
+    <script src="js/Variaciones.js?v=082n"></script>
+    <script src="js/StageEditor.js?v=082m"></script>
+    <script src="js/menu.js?v=082n"></script>
+    <script src="js/GCDUpdate.js?v=082n3"></script>
+<script src="js/Tema.js?v=082r5b"></script>
+<script src="js/PantallaCompleta.js?v=082r6"></script>
 </body>
 </html>
