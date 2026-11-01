@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gcd-chart-editor-v085d';
+const CACHE_NAME = 'gcd-chart-editor-v085e';
 const CORE_ASSETS = [
   './',
   './index.html',
