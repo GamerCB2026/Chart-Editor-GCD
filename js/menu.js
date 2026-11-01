@@ -1022,3 +1022,62 @@ async function procesarReVinculacionAudios() {
         btn.disabled = false;
     }
 }
+
+// ==========================================
+// --- VISTA → FNF GCD: jugar el chart actual en Test Song FNF GCD ---
+// Mismo origen (gamercb2026.github.io): el .fnfc (chart + metadata + Inst + Voices)
+// se deja en IndexedDB "gcd-handoff". En file:// u otro origen se envía por
+// postMessage cuando la pestaña nueva avisa "gcd-handoff-ready".
+// ==========================================
+const URL_FNF_GCD = "https://gamercb2026.github.io/TestSong-ChartEditorGCD/";
+
+function guardarHandoffFNFGCD(paquete) {
+    return new Promise((ok) => {
+        if (!window.indexedDB) return ok(false);
+        let rq;
+        try { rq = indexedDB.open("gcd-handoff", 1); } catch (e) { return ok(false); }
+        rq.onupgradeneeded = () => rq.result.createObjectStore("p");
+        rq.onerror = () => ok(false);
+        rq.onsuccess = () => {
+            try {
+                const db = rq.result, tx = db.transaction("p", "readwrite");
+                tx.objectStore("p").put(paquete, "ultimo");
+                tx.oncomplete = () => { db.close(); ok(true); };
+                tx.onerror = () => { db.close(); ok(false); };
+            } catch (e) { ok(false); }
+        };
+    });
+}
+
+async function abrirFNFGCD() {
+    document.getElementById("menu-vista-wrapper")?.classList.remove("open");
+    if (!currentChartData) { alert("Abre un chart primero para jugarlo en FNF GCD."); return; }
+    // La pestaña se abre ya (en el clic) para que el navegador no la bloquee.
+    const win = window.open("about:blank", "_blank");
+    let paquete;
+    try {
+        const { songNameId, archivos } = construirContenidoFNFCGCD();
+        paquete = {
+            ts: Date.now(), song: songNameId,
+            files: archivos.map(([nombre, c]) => ({ name: nombre, blob: c instanceof Blob ? c : new Blob([c], { type: "application/json" }) }))
+        };
+    } catch (err) {
+        console.error("[FNF GCD]", err);
+        if (win) win.close();
+        alert("No se pudo preparar el chart para FNF GCD.");
+        return;
+    }
+    const mismoOrigen = location.origin === new URL(URL_FNF_GCD).origin;
+    if (mismoOrigen) await guardarHandoffFNFGCD(paquete);
+    const destino = URL_FNF_GCD + "?gcd=" + paquete.ts;
+    const onMsg = (e) => {
+        if (!win || e.source !== win || !e.data || e.data.type !== "gcd-handoff-ready") return;
+        try { win.postMessage({ type: "gcd-song", song: paquete.song, files: paquete.files }, "*"); } catch (err) { console.warn("[FNF GCD] postMessage", err); }
+        window.removeEventListener("message", onMsg);
+    };
+    window.addEventListener("message", onMsg);
+    setTimeout(() => window.removeEventListener("message", onMsg), 120000);
+    if (win) win.location.href = destino;
+    else { alert("El navegador bloqueó la pestaña nueva. Permite ventanas emergentes para abrir FNF GCD."); window.removeEventListener("message", onMsg); return; }
+    if (typeof mostrarToastGCD === "function") mostrarToastGCD("Abriendo FNF GCD con el chart actual…");
+}
