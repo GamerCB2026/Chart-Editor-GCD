@@ -1079,5 +1079,39 @@ async function abrirFNFGCD() {
     setTimeout(() => window.removeEventListener("message", onMsg), 120000);
     if (win) win.location.href = destino;
     else { alert("El navegador bloqueó la pestaña nueva. Permite ventanas emergentes para abrir FNF GCD."); window.removeEventListener("message", onMsg); return; }
-    if (typeof mostrarToastGCD === "function") mostrarToastGCD("Abriendo FNF GCD con el chart actual…");
+    if (typeof mostrarToastGCD === "function") mostrarToastGCD("Abriendo FNF GCD (Prueba): te pedirá personajes, stage e iconos…");
 }
+
+/* ===== Test Song FNF GCD → "Chart GCD": modo selector =====
+   Test Song abre el editor con ?testsong=…; el usuario abre/elige un chart y pulsa
+   "Jugar en Test Song": el chart (.fnfc: chart + metadata + Inst + Voices) vuelve a Test Song,
+   que luego pide personajes, stage e iconos. */
+function paqueteFNFGCD() {
+    const { songNameId, archivos } = construirContenidoFNFCGCD();
+    return { ts: Date.now(), song: songNameId,
+        files: archivos.map(([nombre, c]) => ({ name: nombre, blob: c instanceof Blob ? c : new Blob([c], { type: "application/json" }) })) };
+}
+(function selectorTestSongGCD() {
+    if (!/[?&]testsong=/.test(location.search) || !window.opener) return;
+    const iniciar = () => {
+        const bar = document.createElement("div");
+        bar.id = "gcd-testsong-bar";
+        bar.style.cssText = "position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:99999;background:#15151c;color:#fff;border:2px solid #ff91f1;border-radius:12px;padding:10px 14px;font:14px sans-serif;box-shadow:0 6px 24px #000a;display:flex;gap:8px;align-items:center;flex-wrap:wrap;max-width:94vw";
+        bar.innerHTML = '<span><b style="color:#ff91f1">Test Song FNF GCD (Prueba)</b>: abre o elige un chart y pulsa</span>' +
+            '<button id="gcd-ts-send" style="padding:7px 12px;border:0;border-radius:8px;background:#ff91f1;font-weight:bold;cursor:pointer">▶ Jugar en Test Song</button>' +
+            '<button id="gcd-ts-cancel" style="padding:7px 12px;border:0;border-radius:8px;background:#444;color:#fff;cursor:pointer">Cancelar</button>';
+        document.body.appendChild(bar);
+        try { window.opener.postMessage({ type: "gcd-picker-ready" }, "*"); } catch (e) {}
+        document.getElementById("gcd-ts-cancel").onclick = () => { bar.remove(); };
+        document.getElementById("gcd-ts-send").onclick = () => {
+            if (!currentChartData) { alert("Primero abre o elige un chart."); return; }
+            let p;
+            try { p = paqueteFNFGCD(); } catch (err) { console.error("[Test Song]", err); alert("No se pudo preparar el chart."); return; }
+            try { window.opener.postMessage({ type: "gcd-song", song: p.song, files: p.files }, "*"); }
+            catch (err) { alert("No se pudo enviar el chart a Test Song (¿se cerró la pestaña?)."); return; }
+            if (typeof mostrarToastGCD === "function") mostrarToastGCD("Chart enviado a Test Song FNF GCD");
+            bar.querySelector("span").innerHTML = "✔ Chart enviado. Vuelve a Test Song (te pedirá personajes y stage).";
+        };
+    };
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciar); else iniciar();
+})();
